@@ -256,6 +256,21 @@ h2 {
   margin-top: 8px;
 }
 
+.answer-explanation {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.answer-explanation h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.answer-explanation p {
+  line-height: 1.7;
+}
+
 .wrong-list {
   margin-top: 14px;
 }

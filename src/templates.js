@@ -20,13 +20,26 @@ function renderStatusBar(installState) {
   `;
 }
 
+function renderExplanation(explanation) {
+  if (!explanation) {
+    return "";
+  }
+
+  return `
+    <div class="answer-explanation">
+      <h3>解析</h3>
+      <p>${explanation}</p>
+    </div>
+  `;
+}
+
 export function renderHomeView({ summary, mode, installState, systems }) {
   return `
     <section class="home-view">
       <header class="hero">
         <p class="eyebrow">诊断刷题</p>
         <h1>执业医题眼诊断练习</h1>
-        <p class="subtitle">根据题眼判断诊断，答错会立即告诉你正确答案。</p>
+        <p class="subtitle">根据题眼判断诊断，答题后立即查看正确答案和解析。</p>
         ${renderStatusBar(installState)}
         ${renderModeToggle(mode)}
       </header>
@@ -63,6 +76,7 @@ export function renderQuestionView({ mode, question, progressLabel, options, fee
       <div class="feedback ${feedback.correct ? "correct" : "wrong"}">
         <p>你的答案：${feedback.userAnswer || "未作答"}</p>
         <p>正确答案：${feedback.answer}</p>
+        ${renderExplanation(feedback.explanation)}
       </div>
     `
     : "";
@@ -116,6 +130,7 @@ export function renderWrongBookView({ entries }) {
           <article class="question-card">
             <p class="clue">${entry.clue}</p>
             <p>正确答案：${entry.answer}</p>
+            ${renderExplanation(entry.explanation)}
             <p>错 ${entry.wrongCount} 次</p>
             <p>最近做错：${new Date(entry.lastWrongAt).toLocaleString("zh-CN")}</p>
           </article>

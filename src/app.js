@@ -3,6 +3,7 @@ import {
   buildChoiceOptions,
   buildSystemStats,
   createSession,
+  getQuestionExplanation,
   isAnswerCorrect,
   recordWrongQuestion,
   summarizeProgress
@@ -64,11 +65,24 @@ function renderHome() {
   });
 }
 
+function decorateQuestion(question) {
+  return {
+    ...question,
+    explanation: getQuestionExplanation(question)
+  };
+}
+
 function renderWrongBook() {
   const entries = Object.values(state.wrongBook)
     .map((item) => {
       const question = questions.find((row) => row.id === item.questionId);
-      return question ? { ...question, wrongCount: item.wrongCount, lastWrongAt: item.lastWrongAt } : null;
+      return question
+        ? {
+            ...decorateQuestion(question),
+            wrongCount: item.wrongCount,
+            lastWrongAt: item.lastWrongAt
+          }
+        : null;
     })
     .filter(Boolean)
     .sort((left, right) => right.lastWrongAt.localeCompare(left.lastWrongAt));
@@ -127,7 +141,8 @@ function submitAnswer(userAnswer) {
   feedback = {
     correct,
     answer: question.answer,
-    userAnswer
+    userAnswer,
+    explanation: getQuestionExplanation(question)
   };
 
   renderCurrentQuestion();

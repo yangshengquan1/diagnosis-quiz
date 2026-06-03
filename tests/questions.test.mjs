@@ -36,5 +36,7 @@ test("question bank exports a large structured set with unique ids", () => {
     assert.equal(Number.isInteger(question.sourcePage), true);
     assert.ok(question.sourcePage >= 1 && question.sourcePage <= 16);
     assert.equal(typeof question.notes, "string");
+    assert.equal(typeof question.explanation, "string");
+    assert.ok(question.explanation.trim().length > 0);
   }
 });

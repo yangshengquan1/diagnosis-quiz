@@ -15,15 +15,32 @@ export const systems = [
 ];
 
 function buildQuestions(system, rows) {
-  return rows.map(([id, sourcePage, clue, answer, aliases = [], notes = ""]) => ({
+  return rows.map(([id, sourcePage, clue, answer, aliases = [], notes = "", explanation]) => ({
     id,
     system,
     clue,
     answer,
     aliases,
     sourcePage,
-    notes
+    notes,
+    ...(explanation ? { explanation } : {})
   }));
+}
+
+function extractKeywords(clue) {
+  return String(clue)
+    .split(/[+,，。；、]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+function buildExplanation(question) {
+  const keywords = extractKeywords(question.clue);
+  const keywordText = keywords.length ? keywords.join("、") : "题干中的关键信息";
+  const leadKeyword = keywords[0] || question.answer;
+
+  return `题干出现${keywordText}等关键信息，最符合${question.answer}的典型诊断线索，因此答案是${question.answer}。复习时优先抓住“${leadKeyword}”这一题眼，再结合所属系统进行判断。`;
 }
 
 export const questions = [
@@ -231,3 +248,9 @@ export const questions = [
     ["other-013", 16, "昏迷+镇静催眠药物服用病史", "镇静催眠药中毒", [], "助理不要求"]
   ])
 ];
+
+questions.forEach((question) => {
+  if (!question.explanation || !question.explanation.trim()) {
+    question.explanation = buildExplanation(question);
+  }
+});

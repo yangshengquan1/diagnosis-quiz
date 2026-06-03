@@ -1,9 +1,10 @@
+const FALLBACK_EXPLANATION = "该题解析暂未补充，可先结合题干关键词和标准答案复习。";
+
 function normalizePunctuation(value) {
   return value
-    .replace(/[（【]/g, "(")
-    .replace(/[）】]/g, ")")
-    .replace(/[，、；：]/g, ",")
-    .replace(/[。]/g, ".")
+    .replace(/[（）]/g, (match) => (match === "（" ? "(" : ")"))
+    .replace(/[，、；]/g, ",")
+    .replace(/。/g, ".")
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/\s*\+\s*/g, "+")
@@ -12,6 +13,11 @@ function normalizePunctuation(value) {
 
 export function normalizeAnswer(value = "") {
   return normalizePunctuation(String(value).trim().replace(/\s+/g, " "));
+}
+
+export function getQuestionExplanation(question) {
+  const explanation = String(question?.explanation || "").trim();
+  return explanation || FALLBACK_EXPLANATION;
 }
 
 export function isAnswerCorrect(question, input) {
