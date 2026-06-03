@@ -1,4 +1,4 @@
-export const CACHE_NAME = "diagnosis-quiz-v5";
+export const CACHE_NAME = "diagnosis-quiz-v6";
 export const PRECACHE_URLS = [
   "./",
   "./index.html",

@@ -58,60 +58,99 @@ function explainKeyword(keyword, question) {
     return appendAnswerContext(matchedRule.meaning(question.answer, keyword), keyword, question);
   }
 
-  if (/[<>＝=]|mmHg|U\/L|FEV1|CT|MRI|X线|胸片|HCG|ADA|LDH|PaO2|PaCO2/i.test(keyword)) {
-    return appendAnswerContext("这是题干中的检查或化验线索，能明显缩小诊断范围。", keyword, question);
+  return appendAnswerContext(buildDefaultClueMeaning(keyword, question), keyword, question);
+}
+
+function buildDefaultClueMeaning(keyword, question) {
+  const role = classifyClueRole(keyword);
+  const baseMeaning = buildRoleMeaning(role, question.answer, keyword);
+
+  if (baseMeaning) {
+    return baseMeaning;
   }
 
-  if (/痛|困难|水肿|出血|黄疸|昏迷|抽搐|偏瘫/.test(keyword)) {
-    return appendAnswerContext(`提示出现了关键症状，需要结合其他线索进一步判断。`, keyword, question);
+  return `这是本题需要优先识别的题眼，说明${question.answer}的证据链已经开始收窄`;
+}
+
+function buildRoleMeaning(role, answer, keyword) {
+  switch (role) {
+    case "背景人群":
+      return `这是背景人群线索，说明${answer}更常见于这类年龄或人群`;
+    case "客观证据":
+      return `这是客观检查或化验线索，说明${answer}已经有可以被检查证实的病理改变`;
+    case "临床表现":
+      return `这是临床表现线索，说明${answer}已经影响到相应器官或系统，所以才会出现这个症状`;
+    case "危险因素":
+      return `这是危险因素线索，说明${answer}的发生背景和这个暴露或病史更吻合`;
+    case "题眼":
+    default:
+      return `这是题眼线索，说明${answer}的典型表现已经露出来了`;
+  }
+}
+
+function classifyClueRole(keyword) {
+  if (/中老年人|青年人|青壮年|青少年|老年人|儿童|孕妇|产后|女性|男性/.test(keyword)) {
+    return "背景人群";
   }
 
-  return appendAnswerContext("这是本题需要优先识别的题眼。", keyword, question);
+  if (/[<>＝=]|mmHg|U\/L|FEV1|CT|MRI|X线|胸片|HCG|ADA|LDH|PaO2|PaCO2|血压|血常规|抗|酶|尿|血气|B超|超声/.test(keyword)) {
+    return "客观证据";
+  }
+
+  if (/吸烟|饮酒|高嘌呤|接触史|外伤史|感染史|病史|药物|NSAIDs|血栓|卧床|妊娠|高血压/.test(keyword)) {
+    return "危险因素";
+  }
+
+  if (/痛|困难|水肿|出血|黄疸|昏迷|抽搐|偏瘫|咳嗽|咳痰|咯血|胸痛|腹痛|关节|皮疹|发热|盗汗|尿频|尿急|尿痛|呕吐|腹泻|心悸|眩晕/.test(keyword)) {
+    return "临床表现";
+  }
+
+  return "题眼";
 }
 
 function appendAnswerContext(baseMeaning, keyword, question) {
   const contextualMeaning = buildAnswerContext(keyword, question);
+  const normalizedBase = String(baseMeaning).trim().replace(/[。．\.]+$/, "");
 
   if (!contextualMeaning) {
-    return baseMeaning;
+    return `${normalizedBase}。`;
   }
 
-  return `${baseMeaning}${contextualMeaning}`;
+  return `${normalizedBase}。${String(contextualMeaning).trim()}`;
 }
 
 function buildReasoning(question, clues) {
   if (clues.length === 0) {
-    return `先看题干提供的是哪一系统的症状和检查，再看有没有能够直接定性的关键证据；本题整体更符合${question.answer}的常见表现，所以首先考虑${question.answer}。`;
+    return `这题的线索虽然不多，但已经把${question.answer}的病变方向和典型表现串了起来，所以本题最符合${question.answer}。`;
   }
 
-  const highlightedClues = selectHighlights(
-    clues.map((item) => item.clue),
-    Math.min(3, clues.length)
-  );
-  const [firstClue, secondClue, thirdClue] = highlightedClues;
+  const clueStatements = clues.map((item, index) => {
+    const meaning = summarizeMeaningForReasoning(item.meaning);
+    return `第${index + 1}条“${item.clue}”${meaning}`;
+  });
+  const systemSummary = buildSystemSummary(question, clues);
 
-  const opening = firstClue
-    ? `先看“${firstClue}”提示的主要病变方向`
-    : "先看题干提示的主要病变方向";
-  const middle = secondClue
-    ? `，再看“${secondClue}”提供的特异性证据`
-    : "，再看有没有更特异的证据";
-  const closingDetail = thirdClue
-    ? `，再结合“${thirdClue}”这一补充线索`
-    : "";
-  const systemSummary = buildSystemSummary(question);
-
-  return `${opening}${middle}${closingDetail}。把这些表现综合起来看，说明${systemSummary}，所以本题最符合${question.answer}。`;
+  return `${clueStatements.join("；")}。${systemSummary}，所以本题最符合${question.answer}。`;
 }
 
-function buildSystemSummary(question) {
+function summarizeMeaningForReasoning(meaning) {
+  return String(meaning)
+    .trim()
+    .replace(/[。．\.]+$/, "")
+    .replace(/^这是/, "")
+    .replace(/^本题需要优先识别的题眼，?/, "这是题眼，")
+    .replace(/^提示/, "说明")
+    .replace(/^，/, "");
+}
+
+function buildSystemSummary(question, clues) {
   const matchedRule = diagnosisSummaryRules.find((rule) => rule.pattern.test(question.answer));
 
   if (matchedRule) {
-    return matchedRule.summary(question);
+    return matchedRule.summary(question, clues);
   }
 
-  return `${question.answer}的典型临床特征已经基本凑齐`;
+  return `${question.answer}的背景线索、主要表现和客观证据已经互相印证`;
 }
 
 function buildAnswerContext(keyword, question) {
@@ -391,6 +430,9 @@ function buildAlternatives(question, keywords) {
 const keywordMeaningRules = [
   { pattern: /中老年人/, meaning: () => "提示慢性病、退行性病变或肿瘤性疾病的可能性更大。" },
   { pattern: /青年人|青壮年|青少年/, meaning: () => "提示疾病更偏向年轻人常见病谱，需要优先考虑该年龄段高发疾病。" },
+  { pattern: /多系统症状/, meaning: () => "提示病变不是单一器官的问题，而是多系统受累的自身免疫性疾病更常见。" },
+  { pattern: /抗Sm|抗dsDNA/, meaning: () => "提示存在较高特异性的自身抗体，是系统性红斑狼疮很重要的定性证据。" },
+  { pattern: /大关节肿痛/, meaning: () => "提示炎症性关节受累，是系统性红斑狼疮常见的支持表现之一。" },
   { pattern: /发热|高热|寒战/, meaning: () => "提示急性感染或明显炎症反应，是感染性疾病的重要线索。" },
   { pattern: /低热|盗汗/, meaning: () => "提示慢性感染或消耗性疾病，结核等疾病中较常见。" },
   { pattern: /咳嗽|咳痰/, meaning: () => "提示病变主要累及呼吸系统，需要从气道或肺实质疾病中判断。" },
@@ -440,6 +482,18 @@ const keywordMeaningRules = [
 ];
 
 const answerContextRules = [
+  {
+    pattern: /系统性红斑狼疮 .*多系统症状/,
+    detail: () => " 这类病的核心就是全身多器官受累，所以口腔溃疡、皮疹、浆膜炎等多系统表现很常见。"
+  },
+  {
+    pattern: /系统性红斑狼疮 .*抗Sm|系统性红斑狼疮 .*抗dsDNA/,
+    detail: () => " 其中抗Sm和抗dsDNA是很有特异性的自身抗体，能把诊断从“像”推进到“更像就是它”。"
+  },
+  {
+    pattern: /系统性红斑狼疮 .*大关节肿痛/,
+    detail: () => " 关节炎和关节痛是SLE常见受累表现，通常和皮疹、黏膜损害等一起出现。"
+  },
   {
     pattern: /慢性阻塞性肺疾病 .*中老年人/,
     detail: () => " 慢阻肺本身就是长期吸烟、长期气道炎症和肺功能缓慢下降后形成的慢性病，因此年龄线索和它很贴。"
@@ -497,31 +551,43 @@ const answerContextRules = [
 const diagnosisSummaryRules = [
   {
     pattern: /慢性阻塞性肺疾病/,
-    summary: () => "患者既有长期慢性气道症状，又有肺过度充气体征，并且肺功能已经证实持续性气流受限"
+    summary: () => "这是一条很完整的慢阻肺证据链：长期慢性气道症状、肺过度充气体征和持续性气流受限都对得上"
   },
   {
     pattern: /^肺炎$/,
-    summary: () => "患者的症状、体征和影像都指向肺实质急性感染"
+    summary: () => "这组线索把急性感染、肺实质体征和影像浸润连在了一起，已经足够支持肺炎"
   },
   {
     pattern: /肺炎链球菌肺炎/,
-    summary: () => "患者有典型急性感染起病，并且痰液和影像表现都符合肺炎链球菌肺炎"
+    summary: () => "急性感染起病加上经典痰液和大片实变影，已经把肺炎链球菌肺炎的证据链串起来了"
   },
   {
     pattern: /急性左心衰/,
-    summary: () => "患者出现了急性肺淤血甚至肺水肿的表现，符合左心功能突然失代偿"
+    summary: () => "急性肺淤血和肺水肿的表现已经出现，说明左心功能是突然失代偿的"
   },
   {
     pattern: /异位妊娠/,
-    summary: () => "患者已进入妊娠相关疾病框架，同时出血表现又提示妊娠位置异常带来的风险"
+    summary: () => "妊娠背景加上出血表现，已经把妊娠位置异常和相关风险连到一起了"
   },
   {
     pattern: /脑出血/,
-    summary: () => "患者既有急性脑血管事件表现，又有出血性影像依据"
+    summary: () => "急性脑血管事件表现加上出血性影像，已经足够支持脑出血"
   },
   {
     pattern: /脑梗死/,
-    summary: () => "患者符合急性缺血性卒中的神经功能缺损特点，而缺乏明确出血证据"
+    summary: () => "神经功能缺损符合急性缺血性卒中，而影像又没有明显出血证据，所以更支持脑梗死"
+  },
+  {
+    pattern: /系统性红斑狼疮/,
+    summary: () => "多系统受累、高特异自身抗体和关节表现已经把自身免疫性结缔组织病的方向锁定了"
+  },
+  {
+    pattern: /类风湿关节炎/,
+    summary: () => "对称性小关节炎和晨僵这两条核心证据已经把炎症性关节病的方向锁定了"
+  },
+  {
+    pattern: /痛风/,
+    summary: () => "高嘌呤背景加上第一跖趾关节急性红肿热痛，已经把尿酸盐结晶性关节炎指向得很清楚"
   }
 ];
 

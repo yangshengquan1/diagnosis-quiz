@@ -19,7 +19,7 @@ test("manifest declares installable app metadata", async () => {
 });
 
 test("service worker uses network-first for app shell resources", () => {
-  assert.equal(CACHE_NAME, "diagnosis-quiz-v5");
+  assert.equal(CACHE_NAME, "diagnosis-quiz-v6");
   assert.equal(isNetworkFirstRequest("https://example.com/"), true);
   assert.equal(isNetworkFirstRequest("https://example.com/diagnosis-quiz/"), true);
   assert.equal(isNetworkFirstRequest("https://example.com/index.html"), true);

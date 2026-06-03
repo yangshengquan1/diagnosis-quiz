@@ -52,6 +52,15 @@ test("question bank exports a large structured set with unique ids", () => {
   }
 });
 
+test("question bank explanations use detailed per-clue reasoning instead of template phrasing", () => {
+  for (const question of questions) {
+    assert.ok(question.explanation);
+    assert.match(question.explanation.reasoning, /第\d+条|逐条|每条/);
+    assert.match(question.explanation.reasoning, /所以|因此|最终|最符合/);
+    assert.doesNotMatch(question.explanation.reasoning, /先看|再看|把这些表现综合起来看/);
+  }
+});
+
 test("copd explanation gives line-by-line support and a combined diagnostic chain", () => {
   const question = questions.find((item) => item.id === "resp-001");
 
@@ -68,9 +77,8 @@ test("copd explanation gives line-by-line support and a combined diagnostic chai
   assert.match(ageClue.meaning, /慢性阻塞性肺疾病|慢阻肺/);
   assert.match(chestClue.meaning, /肺过度充气|慢性阻塞性肺疾病|慢阻肺/);
   assert.match(spirometryClue.meaning, /持续性气流受限|客观依据|慢性阻塞性肺疾病|慢阻肺/);
-  assert.match(question.explanation.reasoning, /先/);
-  assert.match(question.explanation.reasoning, /再/);
-  assert.match(question.explanation.reasoning, /综合|一起看/);
+  assert.match(question.explanation.reasoning, /第1条|逐条|每条/);
+  assert.match(question.explanation.reasoning, /证据链|合起来|综合/);
   assert.match(question.explanation.reasoning, /慢性阻塞性肺疾病/);
 });
 
@@ -89,6 +97,27 @@ test("pneumonia explanation explains why each sign points to lung infection", ()
   assert.match(feverClue.meaning, /感染|炎症/);
   assert.match(wetRalesClue.meaning, /渗出物|肺泡|肺实质/);
   assert.match(xrayClue.meaning, /影像|肺实质|肺炎/);
-  assert.match(question.explanation.reasoning, /呼吸系统|肺实质|感染/);
+  assert.match(question.explanation.reasoning, /第1条|逐条|每条/);
+  assert.match(question.explanation.reasoning, /感染|肺实质/);
   assert.match(question.explanation.reasoning, /肺炎/);
+});
+
+test("sle explanation explains each clue and the combined autoimmune chain", () => {
+  const question = questions.find((item) => item.id === "rheum-002");
+
+  assert.ok(question);
+
+  const systemicClue = question.explanation.clues.find((item) => item.clue === "多系统症状");
+  const antibodyClue = question.explanation.clues.find((item) => item.clue === "抗Sm或抗dsDNA抗体阳性");
+  const jointClue = question.explanation.clues.find((item) => item.clue === "大关节肿痛");
+
+  assert.ok(systemicClue);
+  assert.ok(antibodyClue);
+  assert.ok(jointClue);
+  assert.match(systemicClue.meaning, /多系统|自身免疫|结缔组织病/);
+  assert.match(antibodyClue.meaning, /抗Sm|抗dsDNA|特异|定性/);
+  assert.match(jointClue.meaning, /关节|炎症|受累/);
+  assert.match(question.explanation.reasoning, /第1条|逐条|每条/);
+  assert.match(question.explanation.reasoning, /系统性红斑狼疮/);
+  assert.doesNotMatch(question.explanation.reasoning, /先看|再看/);
 });
