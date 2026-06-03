@@ -119,6 +119,29 @@ h2 {
   line-height: 1.6;
 }
 
+.status-bar {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+
+.secondary-action {
+  background: transparent;
+}
+
 .mode-toggle,
 .entry-grid,
 .system-list,
@@ -265,6 +288,16 @@ h2 {
   .mode-toggle,
   .manual-form {
     grid-template-columns: 1fr;
+  }
+
+  .status-bar {
+    align-items: stretch;
+  }
+
+  .status-pill,
+  .secondary-action {
+    width: 100%;
+    justify-content: center;
   }
 
   .question-actions button {

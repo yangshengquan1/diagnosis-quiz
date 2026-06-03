@@ -10,6 +10,7 @@ test("renderHomeView includes the three main entry points", () => {
   const html = renderHomeView({
     summary: { totalQuestions: 174, completedCount: 12, wrongCount: 5 },
     mode: "四选一",
+    installState: null,
     systems: [
       { name: "呼吸系统疾病", total: 23, completed: 3, wrong: 1 },
       { name: "心血管系统疾病", total: 14, completed: 2, wrong: 0 }
@@ -23,12 +24,31 @@ test("renderHomeView includes the three main entry points", () => {
   assert.match(html, /手动输入/);
 });
 
+test("renderHomeView includes install and network status copy", () => {
+  const html = renderHomeView({
+    summary: { totalQuestions: 174, completedCount: 12, wrongCount: 5 },
+    mode: "四选一",
+    installState: {
+      canInstall: true,
+      isInstalled: false,
+      isOnline: true,
+      label: "可安装到主屏幕"
+    },
+    systems: [
+      { name: "呼吸系统疾病", total: 23, completed: 3, wrong: 1 }
+    ]
+  });
+
+  assert.match(html, /可安装到主屏幕/);
+  assert.match(html, /data-action="install-app"/);
+});
+
 test("renderQuestionView shows either options or manual input based on mode", () => {
   const optionHtml = renderQuestionView({
     mode: "四选一",
     question: {
       system: "呼吸系统疾病",
-      clue: "中老年人+咳嗽、咳痰数年或数十年+桶状胸",
+      clue: "中老年人，咳嗽、咳痰数年或数十年，桶状胸，FEV1/FVC<70%",
       sourcePage: 1
     },
     progressLabel: "1 / 20",
@@ -40,7 +60,7 @@ test("renderQuestionView shows either options or manual input based on mode", ()
     mode: "手动输入",
     question: {
       system: "呼吸系统疾病",
-      clue: "中老年人+咳嗽、咳痰数年或数十年+桶状胸",
+      clue: "中老年人，咳嗽、咳痰数年或数十年，桶状胸，FEV1/FVC<70%",
       sourcePage: 1
     },
     progressLabel: "1 / 20",
@@ -57,7 +77,7 @@ test("renderWrongBookView lists wrong counts and recent-practice actions", () =>
   const html = renderWrongBookView({
     entries: [
       {
-        clue: "中老年人+咳嗽、咳痰数年或数十年+桶状胸",
+        clue: "中老年人，咳嗽、咳痰数年或数十年，桶状胸，FEV1/FVC<70%",
         answer: "慢性阻塞性肺疾病",
         wrongCount: 2,
         lastWrongAt: "2026-06-03T12:00:00.000Z"

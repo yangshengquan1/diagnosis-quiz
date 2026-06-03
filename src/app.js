@@ -9,6 +9,10 @@ import {
 } from "./quiz-core.js";
 import { createStorageApi, defaultState } from "./storage.js";
 import {
+  buildInstallState,
+  serviceWorkerScriptUrl
+} from "./pwa.js";
+import {
   renderHomeView,
   renderQuestionView,
   renderWrongBookView
@@ -21,9 +25,23 @@ let state = { ...defaultState, ...storage.load() };
 let session = null;
 let currentIndex = 0;
 let feedback = null;
+let installPromptEvent = null;
+let installState = buildInstallState({
+  hasPrompt: false,
+  isStandalone: window.matchMedia("(display-mode: standalone)").matches,
+  isOnline: navigator.onLine
+});
 
 function save() {
   storage.save(state);
+}
+
+function updateInstallState() {
+  installState = buildInstallState({
+    hasPrompt: Boolean(installPromptEvent),
+    isStandalone: window.matchMedia("(display-mode: standalone)").matches,
+    isOnline: navigator.onLine
+  });
 }
 
 function markCompleted(questionId) {
@@ -37,9 +55,11 @@ function markCompleted(questionId) {
 }
 
 function renderHome() {
+  updateInstallState();
   app.innerHTML = renderHomeView({
     summary: summarizeProgress(questions, state),
     mode: state.mode,
+    installState,
     systems: buildSystemStats(questions, state, systems)
   });
 }
@@ -137,10 +157,66 @@ function openRecentWrongs() {
   });
 }
 
-app.addEventListener("click", (event) => {
+async function promptInstall() {
+  if (!installPromptEvent) {
+    return;
+  }
+
+  await installPromptEvent.prompt();
+  installPromptEvent = null;
+  renderHome();
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPromptEvent = event;
+
+  if (!session) {
+    renderHome();
+  }
+});
+
+window.addEventListener("appinstalled", () => {
+  installPromptEvent = null;
+
+  if (!session) {
+    renderHome();
+  }
+});
+
+window.addEventListener("online", () => {
+  if (!session) {
+    renderHome();
+  }
+});
+
+window.addEventListener("offline", () => {
+  if (!session) {
+    renderHome();
+  }
+});
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      await navigator.serviceWorker.register(serviceWorkerScriptUrl(import.meta.url), {
+        type: "module"
+      });
+    } catch (error) {
+      console.warn("Service worker registration failed", error);
+    }
+  });
+}
+
+app.addEventListener("click", async (event) => {
   const target = event.target.closest("button");
 
   if (!target) {
+    return;
+  }
+
+  if (target.dataset.action === "install-app") {
+    await promptInstall();
     return;
   }
 

@@ -7,13 +7,27 @@ function renderModeToggle(mode) {
   `;
 }
 
-export function renderHomeView({ summary, mode, systems }) {
+function renderStatusBar(installState) {
+  if (!installState) {
+    return "";
+  }
+
+  return `
+    <section class="status-bar" aria-label="应用状态">
+      <span class="status-pill">${installState.label}</span>
+      ${installState.canInstall ? '<button data-action="install-app" class="secondary-action">安装应用</button>' : ""}
+    </section>
+  `;
+}
+
+export function renderHomeView({ summary, mode, installState, systems }) {
   return `
     <section class="home-view">
       <header class="hero">
         <p class="eyebrow">诊断刷题</p>
         <h1>执业医题眼诊断练习</h1>
         <p class="subtitle">根据题眼判断诊断，答错会立即告诉你正确答案。</p>
+        ${renderStatusBar(installState)}
         ${renderModeToggle(mode)}
       </header>
       <section class="stats-grid">
