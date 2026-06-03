@@ -1,0 +1,9 @@
+{
+  "name": "diagnosis-quiz",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node ./scripts/serve.mjs",
+    "test": "node --test"
+  }
+}

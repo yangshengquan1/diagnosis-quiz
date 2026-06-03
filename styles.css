@@ -1,0 +1,307 @@
+:root {
+  color-scheme: light;
+  --bg: #f3f6fb;
+  --surface: #ffffff;
+  --surface-strong: #eef4ff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #d7deea;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --success-bg: #ecfdf5;
+  --success-text: #166534;
+  --danger-bg: #fef2f2;
+  --danger-text: #b91c1c;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: linear-gradient(180deg, #f7faff 0%, var(--bg) 100%);
+  color: var(--text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  min-height: 46px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+input {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+#app {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+.hero,
+.question-card,
+.stats-grid article,
+.feedback,
+.system-card,
+.empty-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.hero,
+.question-card,
+.feedback,
+.wrong-list article {
+  padding: 18px;
+}
+
+.hero {
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.status-bar {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+
+.secondary-action {
+  background: transparent;
+}
+
+.mode-toggle,
+.entry-grid,
+.system-list,
+.stats-grid,
+.choice-grid,
+.question-actions,
+.wrong-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mode-toggle {
+  margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 180px));
+}
+
+.mode-toggle .active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.stats-grid,
+.entry-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.stats-grid article {
+  padding: 16px;
+}
+
+.stats-grid span,
+.system-card span,
+.meta,
+.question-header span:last-child {
+  color: var(--muted);
+}
+
+.stats-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 28px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 12px;
+}
+
+.system-list,
+.choice-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.system-card {
+  text-align: left;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.system-card strong {
+  font-size: 17px;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.question-header h2 {
+  margin-right: auto;
+}
+
+.question-card {
+  margin-bottom: 14px;
+}
+
+.clue {
+  font-size: 22px;
+  line-height: 1.7;
+}
+
+.meta {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.manual-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.feedback.correct {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.feedback.wrong {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.feedback p + p {
+  margin-top: 8px;
+}
+
+.wrong-list {
+  margin-top: 14px;
+}
+
+.empty-card {
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.question-actions {
+  margin-top: 14px;
+}
+
+.question-actions button {
+  justify-self: start;
+  min-width: 140px;
+}
+
+@media (max-width: 720px) {
+  h1 {
+    font-size: 28px;
+  }
+
+  .clue {
+    font-size: 19px;
+  }
+
+  .stats-grid,
+  .entry-grid,
+  .mode-toggle,
+  .manual-form {
+    grid-template-columns: 1fr;
+  }
+
+  .status-bar {
+    align-items: stretch;
+  }
+
+  .status-pill,
+  .secondary-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .question-actions button {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
