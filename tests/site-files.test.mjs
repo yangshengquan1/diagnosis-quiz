@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import {
+  CACHE_NAME,
+  isNetworkFirstRequest,
+  shouldCacheNetworkResponse
+} from "../service-worker.js";
 
 test("manifest declares installable app metadata", async () => {
   const manifest = JSON.parse(
@@ -13,13 +18,23 @@ test("manifest declares installable app metadata", async () => {
   assert.equal(manifest.icons.length >= 2, true);
 });
 
-test("service worker precaches the app shell", async () => {
-  const source = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
+test("service worker uses network-first for app shell resources", () => {
+  assert.equal(CACHE_NAME, "diagnosis-quiz-v3");
+  assert.equal(isNetworkFirstRequest("https://example.com/"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/index.html"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/src/app.js"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/data/questions.js"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/assets/icon.svg"), false);
+  assert.equal(shouldCacheNetworkResponse({ status: 200, type: "basic" }), true);
+  assert.equal(shouldCacheNetworkResponse({ status: 500, type: "basic" }), false);
+  assert.equal(shouldCacheNetworkResponse({ status: 200, type: "opaque" }), false);
+});
 
-  assert.match(source, /const CACHE_NAME = "diagnosis-quiz-v2"/);
-  assert.match(source, /const PRECACHE_URLS = \[/);
-  assert.match(source, /"\.\/index\.html"/);
-  assert.match(source, /"\.\/styles\.css"/);
-  assert.match(source, /"\.\/src\/app\.js"/);
-  assert.match(source, /"\.\/data\/questions\.js"/);
+test("readme documents desktop and pages verification together", async () => {
+  const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+
+  assert.match(readme, /GitHub Pages/);
+  assert.match(readme, /桌面端/);
+  assert.match(readme, /本地测试/);
+  assert.match(readme, /线上生效/);
 });
