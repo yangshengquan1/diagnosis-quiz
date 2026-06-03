@@ -36,7 +36,10 @@ test("question bank exports a large structured set with unique ids", () => {
     assert.equal(Number.isInteger(question.sourcePage), true);
     assert.ok(question.sourcePage >= 1 && question.sourcePage <= 16);
     assert.equal(typeof question.notes, "string");
-    assert.equal(typeof question.explanation, "string");
-    assert.ok(question.explanation.trim().length > 0);
+    assert.equal(typeof question.explanation, "object");
+    assert.equal(Array.isArray(question.explanation.clues), true);
+    assert.equal(typeof question.explanation.reasoning, "string");
+    assert.ok(question.explanation.reasoning.trim().length > 0);
+    assert.equal(typeof question.explanation.differential, "string");
   }
 });

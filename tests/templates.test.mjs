@@ -73,12 +73,67 @@ test("renderQuestionView shows either options or manual input based on mode", ()
   assert.match(inputHtml, /正确答案：慢性阻塞性肺疾病/);
 });
 
+test("renderQuestionView shows structured explanation sections", () => {
+  const html = renderQuestionView({
+    mode: "手动输入",
+    question: {
+      system: "呼吸系统疾病",
+      clue: "中老年人，咳嗽、咳痰数年或数十年，桶状胸，FEV1/FVC<70%",
+      sourcePage: 1
+    },
+    progressLabel: "1 / 20",
+    options: [],
+    feedback: {
+      correct: false,
+      answer: "慢性阻塞性肺疾病",
+      userAnswer: "肺癌",
+      explanation: {
+        clues: [
+          { clue: "桶状胸", meaning: "提示长期肺过度充气，是慢阻肺常见体征。" },
+          { clue: "FEV1/FVC<70%", meaning: "提示持续气流受限，是慢阻肺诊断关键依据。" }
+        ],
+        reasoning: "这些线索组合起来更支持慢性阻塞性肺疾病。",
+        differential: "支气管哮喘常有可逆性气流受限，而不是持续下降。"
+      }
+    }
+  });
+
+  assert.match(html, /关键线索/);
+  assert.match(html, /桶状胸/);
+  assert.match(html, /持续气流受限/);
+  assert.match(html, /诊断结论/);
+  assert.match(html, /简短鉴别/);
+});
+
+test("renderWrongBookView supports legacy string explanations", () => {
+  const html = renderWrongBookView({
+    entries: [
+      {
+        clue: "发热、咳嗽、咳痰、肺部湿啰音",
+        answer: "肺炎",
+        explanation: "发热、咳嗽、咳痰伴湿啰音，提示肺实质感染。",
+        wrongCount: 1,
+        lastWrongAt: "2026-06-03T12:00:00.000Z"
+      }
+    ]
+  });
+
+  assert.match(html, /解析/);
+  assert.match(html, /诊断结论/);
+  assert.match(html, /肺实质感染/);
+});
+
 test("renderWrongBookView lists wrong counts and recent-practice actions", () => {
   const html = renderWrongBookView({
     entries: [
       {
         clue: "中老年人，咳嗽、咳痰数年或数十年，桶状胸，FEV1/FVC<70%",
         answer: "慢性阻塞性肺疾病",
+        explanation: {
+          clues: [],
+          reasoning: "长期咳嗽咳痰合并气流受限，更支持慢性阻塞性肺疾病。",
+          differential: ""
+        },
         wrongCount: 2,
         lastWrongAt: "2026-06-03T12:00:00.000Z"
       }

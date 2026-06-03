@@ -1,3 +1,5 @@
+import { normalizeExplanation } from "./quiz-core.js";
+
 function renderModeToggle(mode) {
   return `
     <div class="mode-toggle">
@@ -21,16 +23,56 @@ function renderStatusBar(installState) {
 }
 
 function renderExplanation(explanation) {
-  if (!explanation) {
-    return "";
-  }
+  const normalized = normalizeExplanation(explanation);
+  const clueItems = normalized.clues
+    .map((item) => `
+      <li>
+        <strong>${escapeHtml(item.clue)}</strong>
+        <span>${escapeHtml(item.meaning)}</span>
+      </li>
+    `)
+    .join("");
+
+  const clueSection = clueItems
+    ? `
+      <section class="explanation-section">
+        <h4>关键线索</h4>
+        <ul class="explanation-list">
+          ${clueItems}
+        </ul>
+      </section>
+    `
+    : "";
+
+  const differentialSection = normalized.differential
+    ? `
+      <section class="explanation-section">
+        <h4>简短鉴别</h4>
+        <p>${escapeHtml(normalized.differential)}</p>
+      </section>
+    `
+    : "";
 
   return `
     <div class="answer-explanation">
       <h3>解析</h3>
-      <p>${explanation}</p>
+      ${clueSection}
+      <section class="explanation-section">
+        <h4>诊断结论</h4>
+        <p>${escapeHtml(normalized.reasoning)}</p>
+      </section>
+      ${differentialSection}
     </div>
   `;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export function renderHomeView({ summary, mode, installState, systems }) {

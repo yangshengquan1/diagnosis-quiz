@@ -1,4 +1,8 @@
-const FALLBACK_EXPLANATION = "该题解析暂未补充，可先结合题干关键词和标准答案复习。";
+const FALLBACK_EXPLANATION = Object.freeze({
+  clues: [],
+  reasoning: "该题解析暂未补充，可先结合题干关键词和标准答案复习。",
+  differential: ""
+});
 
 function normalizePunctuation(value) {
   return value
@@ -15,9 +19,43 @@ export function normalizeAnswer(value = "") {
   return normalizePunctuation(String(value).trim().replace(/\s+/g, " "));
 }
 
+export function normalizeExplanation(explanation) {
+  if (!explanation) {
+    return { ...FALLBACK_EXPLANATION };
+  }
+
+  if (typeof explanation === "string") {
+    const reasoning = explanation.trim();
+
+    return {
+      clues: [],
+      reasoning: reasoning || FALLBACK_EXPLANATION.reasoning,
+      differential: ""
+    };
+  }
+
+  const clues = Array.isArray(explanation.clues)
+    ? explanation.clues
+        .filter((item) => item && (item.clue || item.meaning))
+        .map((item) => ({
+          clue: String(item.clue || "").trim(),
+          meaning: String(item.meaning || "").trim()
+        }))
+        .filter((item) => item.clue || item.meaning)
+    : [];
+
+  const reasoning = String(explanation.reasoning || "").trim();
+  const differential = String(explanation.differential || "").trim();
+
+  return {
+    clues,
+    reasoning: reasoning || FALLBACK_EXPLANATION.reasoning,
+    differential
+  };
+}
+
 export function getQuestionExplanation(question) {
-  const explanation = String(question?.explanation || "").trim();
-  return explanation || FALLBACK_EXPLANATION;
+  return normalizeExplanation(question?.explanation);
 }
 
 export function isAnswerCorrect(question, input) {

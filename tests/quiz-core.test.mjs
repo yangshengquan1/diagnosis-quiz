@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   buildChoiceOptions,
   createSession,
+  getQuestionExplanation,
   isAnswerCorrect,
+  normalizeExplanation,
   normalizeAnswer,
   recordWrongQuestion,
   summarizeProgress
@@ -22,6 +24,42 @@ test("isAnswerCorrect accepts canonical answer and aliases after normalization",
   assert.equal(isAnswerCorrect(question, "慢性阻塞性肺疾病"), true);
   assert.equal(isAnswerCorrect(question, "  慢阻肺 "), true);
   assert.equal(isAnswerCorrect(question, "肺结核"), false);
+});
+
+test("normalizeExplanation converts legacy strings into the structured format", () => {
+  assert.deepEqual(
+    normalizeExplanation("发热、咳嗽提示感染性呼吸系统疾病，更支持肺炎。"),
+    {
+      clues: [],
+      reasoning: "发热、咳嗽提示感染性呼吸系统疾病，更支持肺炎。",
+      differential: ""
+    }
+  );
+});
+
+test("normalizeExplanation preserves structured fields and fills missing defaults", () => {
+  assert.deepEqual(
+    normalizeExplanation({
+      clues: [{ clue: "桶状胸", meaning: "提示肺过度充气，是慢阻肺常见体征。" }],
+      reasoning: "结合气流受限，更支持慢性阻塞性肺疾病。"
+    }),
+    {
+      clues: [{ clue: "桶状胸", meaning: "提示肺过度充气，是慢阻肺常见体征。" }],
+      reasoning: "结合气流受限，更支持慢性阻塞性肺疾病。",
+      differential: ""
+    }
+  );
+});
+
+test("getQuestionExplanation falls back to a structured placeholder", () => {
+  assert.deepEqual(
+    getQuestionExplanation({ explanation: "" }),
+    {
+      clues: [],
+      reasoning: "该题解析暂未补充，可先结合题干关键词和标准答案复习。",
+      differential: ""
+    }
+  );
 });
 
 const sampleQuestions = [

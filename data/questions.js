@@ -1,3 +1,5 @@
+import { normalizeExplanation } from "../src/quiz-core.js";
+
 export const systems = [
   "呼吸系统疾病",
   "心血管系统疾病",
@@ -32,16 +34,155 @@ function extractKeywords(clue) {
     .split(/[+,，。；、]/)
     .map((item) => item.trim())
     .filter(Boolean)
-    .slice(0, 4);
+    .slice(0, 5);
 }
 
 function buildExplanation(question) {
   const keywords = extractKeywords(question.clue);
-  const keywordText = keywords.length ? keywords.join("、") : "题干中的关键信息";
-  const leadKeyword = keywords[0] || question.answer;
+  const clues = keywords.map((keyword) => ({
+    clue: keyword,
+    meaning: explainKeyword(keyword, question)
+  }));
+  const highlightedKeywords = clues.slice(0, 2).map((item) => `“${item.clue}”`).join("、");
 
-  return `题干出现${keywordText}等关键信息，最符合${question.answer}的典型诊断线索，因此答案是${question.answer}。复习时优先抓住“${leadKeyword}”这一题眼，再结合所属系统进行判断。`;
+  return {
+    clues,
+    reasoning: clues.length
+      ? `题干中的${highlightedKeywords}等线索同时出现时，更符合${question.answer}的典型表现，因此本题首先考虑${question.answer}。`
+      : `题干信息整体更符合${question.answer}的常见表现，因此本题首先考虑${question.answer}。`,
+    differential: buildDifferential(question, keywords)
+  };
 }
+
+function explainKeyword(keyword, question) {
+  const matchedRule = keywordMeaningRules.find((rule) => rule.pattern.test(keyword));
+
+  if (matchedRule) {
+    return matchedRule.meaning(question.answer, keyword);
+  }
+
+  if (/[<>＝=]|mmHg|U\/L|FEV1|CT|MRI|X线|胸片|HCG|ADA|LDH|PaO2|PaCO2/i.test(keyword)) {
+    return "这是题干中的检查或化验线索，能明显缩小诊断范围。";
+  }
+
+  if (/痛|困难|水肿|出血|黄疸|昏迷|抽搐|偏瘫/.test(keyword)) {
+    return `提示出现了关键症状，需要结合其他线索进一步判断，更支持${question.answer}。`;
+  }
+
+  return `这是本题需要优先识别的题眼，结合其他表现后更支持${question.answer}。`;
+}
+
+function buildDifferential(question, keywords) {
+  const answer = question.answer;
+  const clueText = keywords.join("、");
+
+  if (answer === "慢性阻塞性肺疾病") {
+    return "支气管哮喘也可有喘息，但更强调反复发作和可逆性气流受限，不像本题这样长期咳嗽咳痰并伴持续性气流受限。";
+  }
+
+  if (answer === "支气管哮喘") {
+    return "慢阻肺多见于中老年人，常有长期吸烟史和持续性气流受限；本题更突出夜间或凌晨加重以及反复发作缓解，更支持哮喘。";
+  }
+
+  if (answer === "肺炎") {
+    return "如果只是上呼吸道感染，通常没有明确肺部湿啰音和胸片渗出影；如果是哮喘，则更常见哮鸣音而不是感染性实变表现。";
+  }
+
+  if (answer === "肺结核") {
+    return "普通肺炎起病多更急，抗感染治疗常有效；本题强调长期低热、盗汗和抗生素治疗无效，更支持肺结核。";
+  }
+
+  if (answer === "肺癌") {
+    return "肺炎多以发热和感染表现为主，肺结核常有低热盗汗；本题更突出痰中带血、消瘦和吸烟史，更要先考虑肺癌。";
+  }
+
+  if (answer === "肺栓塞") {
+    return "急性心肌缺血也可胸痛，但本题还有下肢水肿和P2>A2，提示静脉血栓来源及肺动脉压力升高，更支持肺栓塞。";
+  }
+
+  if (answer === "急性左心衰") {
+    return "肺炎也会有呼吸困难，但粉红色泡沫痰更提示肺淤血和急性心功能不全，而不是单纯感染。";
+  }
+
+  if (answer === "心绞痛") {
+    return "心肌梗死胸痛通常持续更久，含服硝酸甘油往往不能缓解；本题疼痛持续数分钟且硝酸甘油有效，更符合心绞痛。";
+  }
+
+  if (answer === "ST段抬高型心肌梗死" || answer === "非ST段抬高型心肌梗死") {
+    return "心绞痛一般胸痛持续时间较短，休息或含服硝酸甘油后可缓解；本题胸痛持续更久并有相应心电图改变，更支持心肌梗死。";
+  }
+
+  if (answer === "脑出血") {
+    return "脑梗死也可出现偏瘫，但脑出血更常见高血压基础上的急性发作和CT高密度影，本题更符合脑出血。";
+  }
+
+  if (answer === "脑梗死") {
+    return "脑出血常见CT高密度影和更明显的颅内压增高表现，而本题CT阴性且以缺血性神经功能缺损为主，更支持脑梗死。";
+  }
+
+  if (answer === "异位妊娠") {
+    return "先兆流产也会有停经和阴道出血，但本题还强调HCG阳性并需警惕宫外孕相关风险，因此更先考虑异位妊娠。";
+  }
+
+  if (answer === "自然流产") {
+    return "异位妊娠也可表现为停经、腹痛和出血，但本题直接落在妊娠早期流产情境，更先考虑自然流产。";
+  }
+
+  return clueText
+    ? `如果其他常见疾病缺少本题的${clueText}等关键线索，就不如${answer}符合。`
+    : "";
+}
+
+const keywordMeaningRules = [
+  { pattern: /中老年人/, meaning: () => "提示慢性病、退行性病变或肿瘤性疾病的可能性更大。" },
+  { pattern: /青年人|青壮年|青少年/, meaning: () => "提示疾病更偏向年轻人常见病谱，需要优先考虑该年龄段高发疾病。" },
+  { pattern: /发热|高热|寒战/, meaning: () => "提示急性感染或明显炎症反应，是感染性疾病的重要线索。" },
+  { pattern: /低热|盗汗/, meaning: () => "提示慢性感染或消耗性疾病，结核等疾病中较常见。" },
+  { pattern: /咳嗽|咳痰/, meaning: () => "提示病变主要累及呼吸系统，需要从气道或肺实质疾病中判断。" },
+  { pattern: /铁锈色痰/, meaning: () => "这是肺炎链球菌肺炎的经典痰液特征，指向性较强。" },
+  { pattern: /砖红色胶冻状痰/, meaning: () => "这是克雷伯菌肺炎的典型痰液表现，是很有辨识度的题眼。" },
+  { pattern: /粉红色泡沫状痰/, meaning: () => "提示急性肺水肿，常见于急性左心衰。" },
+  { pattern: /桶状胸/, meaning: () => "提示长期肺过度充气，是慢性阻塞性肺疾病的常见体征。" },
+  { pattern: /FEV1\/FVC<70%/, meaning: () => "提示持续性气流受限，是慢性阻塞性肺疾病的重要诊断依据。" },
+  { pattern: /夜间|凌晨加重/, meaning: () => "符合气道高反应性疾病昼夜波动的特点，常见于支气管哮喘。" },
+  { pattern: /呼气性呼吸困难/, meaning: () => "提示小气道阻塞，更支持哮喘等阻塞性通气障碍。" },
+  { pattern: /大量咯血/, meaning: () => "提示支气管或肺组织有明显破坏，支气管扩张等疾病中较常见。" },
+  { pattern: /痰中带血|咯血/, meaning: () => "提示气道或肺组织受损，需要警惕肿瘤、结核等严重病变。" },
+  { pattern: /消瘦/, meaning: () => "提示慢性消耗性疾病或恶性肿瘤可能性增加。" },
+  { pattern: /吸烟/, meaning: () => "是肺癌和慢阻肺等疾病的重要危险因素，可提高诊断指向性。" },
+  { pattern: /湿啰音/, meaning: () => "提示肺泡或细支气管内有渗出物，支持肺实质感染或肺淤血。" },
+  { pattern: /渗出影|大片状渗出影/, meaning: () => "影像提示肺实质炎症浸润，是肺炎的重要证据。" },
+  { pattern: /抗生素治疗无效/, meaning: () => "提示并非普通细菌感染，需考虑结核、肿瘤或其他特殊病因。" },
+  { pattern: /P2>A2/, meaning: () => "提示肺动脉压力升高，常见于肺栓塞等肺循环阻力增加的情况。" },
+  { pattern: /下肢水肿/, meaning: () => "提示静脉血栓来源的可能，需要警惕肺栓塞。" },
+  { pattern: /突发胸痛/, meaning: () => "提示起病急的胸膜或肺血管事件，常不是慢性疾病的表现。" },
+  { pattern: /胸痛/, meaning: () => "提示胸腔或心血管系统急性病变，需要结合持续时间和伴随症状判断。" },
+  { pattern: /呼吸困难/, meaning: () => "提示通气或换气受损，是心肺急症里非常重要的判断点。" },
+  { pattern: /叩诊鼓音/, meaning: () => "提示胸腔内气体增多，气胸时较典型。" },
+  { pattern: /呼吸音消失/, meaning: () => "提示该侧肺通气明显下降，是气胸或大量胸腔积液的重要体征。" },
+  { pattern: /叩诊浊音|叩诊实音/, meaning: () => "提示胸腔积液、实变或占位性病变，需要结合其他线索继续分型。" },
+  { pattern: /纵隔向健侧移位|气管偏移/, meaning: () => "提示胸腔压力或容量明显变化，常见于大量积液、气胸或脓胸。" },
+  { pattern: /胸水ADA>45U\/L/, meaning: () => "ADA升高更支持结核性胸腔积液。" },
+  { pattern: /ADA<45U\/L|LDH>500U\/L/, meaning: () => "提示胸水性质偏向恶性或高度炎症性改变，有助于胸腔积液分型。" },
+  { pattern: /中性粒细胞升高/, meaning: () => "提示急性炎症反应，更支持感染性病变。" },
+  { pattern: /粉红色泡沫状痰/, meaning: () => "提示肺泡内液体渗出，急性左心衰时较典型。" },
+  { pattern: /心律绝对不齐|脉搏短绌/, meaning: () => "这是房颤的经典体征组合，指向性很强。" },
+  { pattern: /突发突止/, meaning: () => "提示阵发性心律失常发作特点，而不是持续性心律紊乱。" },
+  { pattern: /硝酸甘油有效/, meaning: () => "提示心肌缺血可逆，更符合稳定性心绞痛。" },
+  { pattern: /硝酸甘油无效/, meaning: () => "提示缺血更重或已出现坏死，需要警惕心肌梗死。" },
+  { pattern: /ST段抬高|ST段未抬高/, meaning: () => "这是急性冠脉综合征分型的关键心电图依据。" },
+  { pattern: /停经/, meaning: () => "提示首先要进入妊娠相关疾病的判断框架。" },
+  { pattern: /阴道流血|阴道出血/, meaning: () => "提示妇产科出血性问题，需要结合停经、腹痛和妊娠状态判断。" },
+  { pattern: /HCG阳性/, meaning: () => "说明存在妊娠相关背景，是判断异位妊娠等疾病的关键线索。" },
+  { pattern: /无痛性血尿|血尿/, meaning: () => "提示泌尿系统出血，其中无痛性肉眼血尿尤其要警惕肿瘤。" },
+  { pattern: /蛋白尿/, meaning: () => "提示肾小球受损，是肾脏疾病的重要实验室线索。" },
+  { pattern: /肾区叩痛/, meaning: () => "提示上尿路或肾脏本身受累，常见于肾盂肾炎等疾病。" },
+  { pattern: /尿频|尿急|尿痛/, meaning: () => "提示膀胱刺激征，支持尿路感染等下尿路病变。" },
+  { pattern: /意识障碍|昏迷/, meaning: () => "提示中枢神经系统受累较重，需要优先考虑急性脑损伤或脑血管事件。" },
+  { pattern: /偏瘫/, meaning: () => "提示局灶性神经功能缺损，常见于脑卒中等中枢病变。" },
+  { pattern: /CT高密度区/, meaning: () => "提示出血性病变可能性大，是脑出血的重要影像依据。" },
+  { pattern: /CT阴性/, meaning: () => "在急性脑卒中场景中更偏向早期缺血性改变，而非明显出血。" }
+];
 
 export const questions = [
   ...buildQuestions("呼吸系统疾病", [
@@ -250,7 +391,9 @@ export const questions = [
 ];
 
 questions.forEach((question) => {
-  if (!question.explanation || !question.explanation.trim()) {
+  if (!question.explanation) {
     question.explanation = buildExplanation(question);
   }
+
+  question.explanation = normalizeExplanation(question.explanation);
 });

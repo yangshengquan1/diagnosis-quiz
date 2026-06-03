@@ -267,8 +267,36 @@ h2 {
   font-size: 16px;
 }
 
+.explanation-section + .explanation-section {
+  margin-top: 12px;
+}
+
+.explanation-section h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
 .answer-explanation p {
   line-height: 1.7;
+}
+
+.explanation-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.explanation-list li {
+  line-height: 1.7;
+}
+
+.explanation-list strong {
+  color: inherit;
+}
+
+.explanation-list span {
+  color: inherit;
 }
 
 .wrong-list {
