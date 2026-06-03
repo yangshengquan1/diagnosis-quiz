@@ -16,6 +16,7 @@ test("manifest declares installable app metadata", async () => {
 test("service worker precaches the app shell", async () => {
   const source = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
+  assert.match(source, /const CACHE_NAME = "diagnosis-quiz-v2"/);
   assert.match(source, /const PRECACHE_URLS = \[/);
   assert.match(source, /"\.\/index\.html"/);
   assert.match(source, /"\.\/styles\.css"/);
