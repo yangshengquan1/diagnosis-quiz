@@ -2,4 +2,4 @@ cloudflared.exe
 cloudflared.log
 localtunnel.out.log
 localtunnel.err.log
-
+.worktrees/
