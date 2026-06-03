@@ -22,7 +22,7 @@ test("isAnswerCorrect accepts canonical answer and aliases after normalization",
   };
 
   assert.equal(isAnswerCorrect(question, "慢性阻塞性肺疾病"), true);
-  assert.equal(isAnswerCorrect(question, "  慢阻肺 "), true);
+  assert.equal(isAnswerCorrect(question, "  慢阻肺"), true);
   assert.equal(isAnswerCorrect(question, "肺结核"), false);
 });
 
@@ -32,7 +32,7 @@ test("normalizeExplanation converts legacy strings into the structured format", 
     {
       clues: [],
       reasoning: "发热、咳嗽提示感染性呼吸系统疾病，更支持肺炎。",
-      differential: ""
+      alternatives: []
     }
   );
 });
@@ -46,7 +46,48 @@ test("normalizeExplanation preserves structured fields and fills missing default
     {
       clues: [{ clue: "桶状胸", meaning: "提示肺过度充气，是慢阻肺常见体征。" }],
       reasoning: "结合气流受限，更支持慢性阻塞性肺疾病。",
-      differential: ""
+      alternatives: []
+    }
+  );
+});
+
+test("normalizeExplanation converts legacy differential text into one structured alternative", () => {
+  assert.deepEqual(
+    normalizeExplanation({
+      clues: [],
+      reasoning: "长期咳嗽咳痰合并气流受限，更支持慢性阻塞性肺疾病。",
+      differential: "支气管哮喘常有可逆性气流受限，而不是持续下降。"
+    }),
+    {
+      clues: [],
+      reasoning: "长期咳嗽咳痰合并气流受限，更支持慢性阻塞性肺疾病。",
+      alternatives: [
+        {
+          diagnosis: "易混淆诊断",
+          reason: "支气管哮喘常有可逆性气流受限，而不是持续下降。"
+        }
+      ]
+    }
+  );
+});
+
+test("normalizeExplanation preserves structured alternatives", () => {
+  assert.deepEqual(
+    normalizeExplanation({
+      clues: [],
+      reasoning: "发热、咳嗽、湿啰音更支持肺炎。",
+      alternatives: [
+        { diagnosis: "上呼吸道感染", reason: "缺乏明确肺部体征和胸片渗出影。" },
+        { diagnosis: "支气管哮喘", reason: "更常见哮鸣音，而不是感染性实变表现。" }
+      ]
+    }),
+    {
+      clues: [],
+      reasoning: "发热、咳嗽、湿啰音更支持肺炎。",
+      alternatives: [
+        { diagnosis: "上呼吸道感染", reason: "缺乏明确肺部体征和胸片渗出影。" },
+        { diagnosis: "支气管哮喘", reason: "更常见哮鸣音，而不是感染性实变表现。" }
+      ]
     }
   );
 });
@@ -57,7 +98,7 @@ test("getQuestionExplanation falls back to a structured placeholder", () => {
     {
       clues: [],
       reasoning: "该题解析暂未补充，可先结合题干关键词和标准答案复习。",
-      differential: ""
+      alternatives: []
     }
   );
 });

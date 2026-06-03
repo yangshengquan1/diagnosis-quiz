@@ -19,11 +19,15 @@ test("manifest declares installable app metadata", async () => {
 });
 
 test("service worker uses network-first for app shell resources", () => {
-  assert.equal(CACHE_NAME, "diagnosis-quiz-v3");
+  assert.equal(CACHE_NAME, "diagnosis-quiz-v4");
   assert.equal(isNetworkFirstRequest("https://example.com/"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/diagnosis-quiz/"), true);
   assert.equal(isNetworkFirstRequest("https://example.com/index.html"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/diagnosis-quiz/index.html"), true);
   assert.equal(isNetworkFirstRequest("https://example.com/src/app.js"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/diagnosis-quiz/src/app.js"), true);
   assert.equal(isNetworkFirstRequest("https://example.com/data/questions.js"), true);
+  assert.equal(isNetworkFirstRequest("https://example.com/diagnosis-quiz/data/questions.js"), true);
   assert.equal(isNetworkFirstRequest("https://example.com/assets/icon.svg"), false);
   assert.equal(shouldCacheNetworkResponse({ status: 200, type: "basic" }), true);
   assert.equal(shouldCacheNetworkResponse({ status: 500, type: "basic" }), false);

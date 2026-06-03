@@ -43,14 +43,14 @@ function buildExplanation(question) {
     clue: keyword,
     meaning: explainKeyword(keyword, question)
   }));
-  const highlightedKeywords = clues.slice(0, 2).map((item) => `“${item.clue}”`).join("、");
+  const highlightedKeywords = selectHighlights(keywords, 2).map((item) => `“${item}”`).join("、");
 
   return {
     clues,
     reasoning: clues.length
       ? `题干中的${highlightedKeywords}等线索同时出现时，更符合${question.answer}的典型表现，因此本题首先考虑${question.answer}。`
       : `题干信息整体更符合${question.answer}的常见表现，因此本题首先考虑${question.answer}。`,
-    differential: buildDifferential(question, keywords)
+    alternatives: buildAlternatives(question, keywords)
   };
 }
 
@@ -72,65 +72,271 @@ function explainKeyword(keyword, question) {
   return `这是本题需要优先识别的题眼，结合其他表现后更支持${question.answer}。`;
 }
 
-function buildDifferential(question, keywords) {
+function keywordSpecificityScore(keyword) {
+  let score = keyword.length;
+
+  if (/[<>＝=]|mmHg|U\/L|FEV1|CT|MRI|HCG|ADA|LDH|PaO2|PaCO2/i.test(keyword)) {
+    score += 6;
+  }
+
+  if (/桶状胸|盗汗|湿啰音|渗出影|P2>A2|脉搏短绌|硝酸甘油|ST段|方颅|樱桃红|胆碱酯酶|反常呼吸|叶间隙弧形下坠|樱桃红|铁锈色痰|砖红色胶冻状痰|粉红色泡沫状痰/.test(keyword)) {
+    score += 4;
+  }
+
+  if (/中老年人|青年人|青壮年|青少年|老年人|发热|咳嗽|咳痰|胸痛|腹痛|呼吸困难|心悸/.test(keyword)) {
+    score -= 1;
+  }
+
+  return score;
+}
+
+function selectHighlights(keywords, count = 2) {
+  return [...keywords]
+    .map((keyword, index) => ({
+      keyword,
+      index,
+      score: keywordSpecificityScore(keyword)
+    }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .slice(0, count)
+    .map((item) => item.keyword);
+}
+
+function keywordsOverlap(left, right) {
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+function deriveClinicalTags(question) {
+  const text = `${question.system} ${question.answer} ${question.clue}`;
+
+  return clinicalTagRules
+    .filter((rule) => rule.pattern.test(text))
+    .map((rule) => rule.tag);
+}
+
+function formatQuotedList(items) {
+  return items.map((item) => `“${item}”`).join("、");
+}
+
+function buildManualAlternatives(question) {
   const answer = question.answer;
-  const clueText = keywords.join("、");
 
   if (answer === "慢性阻塞性肺疾病") {
-    return "支气管哮喘也可有喘息，但更强调反复发作和可逆性气流受限，不像本题这样长期咳嗽咳痰并伴持续性气流受限。";
+    return [
+      {
+        diagnosis: "支气管哮喘",
+        reason: "支气管哮喘更强调反复发作、夜间加重和可逆性气流受限，不像本题这样长期咳嗽咳痰并伴FEV1/FVC<70%的持续性下降。"
+      }
+    ];
   }
 
   if (answer === "支气管哮喘") {
-    return "慢阻肺多见于中老年人，常有长期吸烟史和持续性气流受限；本题更突出夜间或凌晨加重以及反复发作缓解，更支持哮喘。";
+    return [
+      {
+        diagnosis: "慢性阻塞性肺疾病",
+        reason: "慢阻肺多见于中老年人并常有长期吸烟史，而本题更突出青年人、夜间或凌晨加重和发作后可缓解，更支持支气管哮喘。"
+      }
+    ];
   }
 
   if (answer === "肺炎") {
-    return "如果只是上呼吸道感染，通常没有明确肺部湿啰音和胸片渗出影；如果是哮喘，则更常见哮鸣音而不是感染性实变表现。";
+    return [
+      {
+        diagnosis: "上呼吸道感染",
+        reason: "上呼吸道感染通常没有明确肺部湿啰音和胸片渗出影，而本题这两条肺实质受累证据都已给出。"
+      },
+      {
+        diagnosis: "支气管哮喘",
+        reason: "哮喘更常见反复喘息和哮鸣音，本题却是发热、咳痰伴渗出影，更符合感染性肺炎。"
+      }
+    ];
   }
 
   if (answer === "肺结核") {
-    return "普通肺炎起病多更急，抗感染治疗常有效；本题强调长期低热、盗汗和抗生素治疗无效，更支持肺结核。";
+    return [
+      {
+        diagnosis: "普通肺炎",
+        reason: "普通肺炎起病通常更急，抗感染治疗往往有效；本题强调长期低热、盗汗和抗生素治疗无效，更支持肺结核。"
+      }
+    ];
   }
 
   if (answer === "肺癌") {
-    return "肺炎多以发热和感染表现为主，肺结核常有低热盗汗；本题更突出痰中带血、消瘦和吸烟史，更要先考虑肺癌。";
+    return [
+      {
+        diagnosis: "肺炎",
+        reason: "肺炎多以急性发热和感染表现为主，而本题更突出痰中带血、消瘦和吸烟史，不像单纯感染。"
+      },
+      {
+        diagnosis: "肺结核",
+        reason: "肺结核常伴低热、盗汗等慢性感染表现，本题则更强调进行性消耗和肿瘤危险因素，更要先考虑肺癌。"
+      }
+    ];
   }
 
   if (answer === "肺栓塞") {
-    return "急性心肌缺血也可胸痛，但本题还有下肢水肿和P2>A2，提示静脉血栓来源及肺动脉压力升高，更支持肺栓塞。";
+    return [
+      {
+        diagnosis: "急性心肌梗死",
+        reason: "急性心肌梗死也可突发胸痛，但本题还有下肢水肿和P2>A2，提示静脉血栓来源及肺动脉压力升高，更支持肺栓塞。"
+      }
+    ];
   }
 
   if (answer === "急性左心衰") {
-    return "肺炎也会有呼吸困难，但粉红色泡沫痰更提示肺淤血和急性心功能不全，而不是单纯感染。";
+    return [
+      {
+        diagnosis: "肺炎",
+        reason: "肺炎也会出现呼吸困难，但粉红色泡沫痰更提示肺淤血和急性心功能不全，而不是单纯感染。"
+      }
+    ];
   }
 
   if (answer === "心绞痛") {
-    return "心肌梗死胸痛通常持续更久，含服硝酸甘油往往不能缓解；本题疼痛持续数分钟且硝酸甘油有效，更符合心绞痛。";
+    return [
+      {
+        diagnosis: "急性心肌梗死",
+        reason: "心肌梗死胸痛通常持续更久，含服硝酸甘油往往不能缓解；本题疼痛持续数分钟且硝酸甘油有效，更符合心绞痛。"
+      }
+    ];
   }
 
   if (answer === "ST段抬高型心肌梗死" || answer === "非ST段抬高型心肌梗死") {
-    return "心绞痛一般胸痛持续时间较短，休息或含服硝酸甘油后可缓解；本题胸痛持续更久并有相应心电图改变，更支持心肌梗死。";
+    return [
+      {
+        diagnosis: "心绞痛",
+        reason: "心绞痛一般胸痛持续时间较短，休息或含服硝酸甘油后可缓解；本题胸痛持续更久并有相应心电图改变，更支持心肌梗死。"
+      }
+    ];
   }
 
   if (answer === "脑出血") {
-    return "脑梗死也可出现偏瘫，但脑出血更常见高血压基础上的急性发作和CT高密度影，本题更符合脑出血。";
+    return [
+      {
+        diagnosis: "脑梗死",
+        reason: "脑梗死也可出现偏瘫，但脑出血更常见高血压基础上的急性发作和CT高密度影，本题更符合脑出血。"
+      }
+    ];
   }
 
   if (answer === "脑梗死") {
-    return "脑出血常见CT高密度影和更明显的颅内压增高表现，而本题CT阴性且以缺血性神经功能缺损为主，更支持脑梗死。";
+    return [
+      {
+        diagnosis: "脑出血",
+        reason: "脑出血常见CT高密度影和更明显的颅内压增高表现，而本题CT阴性且以缺血性神经功能缺损为主，更支持脑梗死。"
+      }
+    ];
   }
 
   if (answer === "异位妊娠") {
-    return "先兆流产也会有停经和阴道出血，但本题还强调HCG阳性并需警惕宫外孕相关风险，因此更先考虑异位妊娠。";
+    return [
+      {
+        diagnosis: "自然流产",
+        reason: "自然流产也可有停经和阴道出血，但本题还强调HCG阳性并需警惕宫外孕相关风险，因此更先考虑异位妊娠。"
+      }
+    ];
   }
 
   if (answer === "自然流产") {
-    return "异位妊娠也可表现为停经、腹痛和出血，但本题直接落在妊娠早期流产情境，更先考虑自然流产。";
+    return [
+      {
+        diagnosis: "异位妊娠",
+        reason: "异位妊娠也可表现为停经、腹痛和出血，但本题直接落在妊娠早期流产情境，更先考虑自然流产。"
+      }
+    ];
   }
 
-  return clueText
-    ? `如果其他常见疾病缺少本题的${clueText}等关键线索，就不如${answer}符合。`
-    : "";
+  return [];
+}
+
+function scoreAlternativeQuestion(question, candidate, questionKeywords) {
+  const candidateKeywords = questionKeywordLookup.get(candidate.id) || extractKeywords(candidate.clue);
+  const questionTags = questionTagLookup.get(question.id) || [];
+  const candidateTags = questionTagLookup.get(candidate.id) || [];
+
+  const sharedKeywordCount = questionKeywords.filter((keyword) =>
+    candidateKeywords.some((candidateKeyword) => keywordsOverlap(keyword, candidateKeyword))
+  ).length;
+  const sharedTagCount = questionTags.filter((tag) => candidateTags.includes(tag)).length;
+
+  let score = sharedKeywordCount * 6 + sharedTagCount * 4;
+
+  if (candidate.answer.includes("癌") === question.answer.includes("癌")) {
+    score += 1;
+  }
+
+  if (candidate.answer.includes("炎") === question.answer.includes("炎")) {
+    score += 1;
+  }
+
+  if (candidate.answer.includes("衰") === question.answer.includes("衰")) {
+    score += 1;
+  }
+
+  if (Math.abs(question.sourcePage - candidate.sourcePage) <= 1) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function buildAlternativeReason(question, candidate, questionKeywords) {
+  const candidateKeywords = questionKeywordLookup.get(candidate.id) || extractKeywords(candidate.clue);
+  const presentHighlights = selectHighlights(questionKeywords, 2);
+  const alternativeHighlights = selectHighlights(
+    candidateKeywords.filter((keyword) =>
+      !presentHighlights.some((present) => keywordsOverlap(present, keyword))
+    ),
+    2
+  );
+
+  if (alternativeHighlights.length > 0 && presentHighlights.length > 0) {
+    return `如果是${candidate.answer}，题干通常更会强调${formatQuotedList(alternativeHighlights)}；而本题更关键的是${formatQuotedList(presentHighlights)}，因此更支持${question.answer}。`;
+  }
+
+  if (presentHighlights.length > 0) {
+    return `本题给出的${formatQuotedList(presentHighlights)}更支持${question.answer}，与${candidate.answer}的典型表现并不一致。`;
+  }
+
+  return `${candidate.answer}的题眼组合与本题并不一致，因此本题更支持${question.answer}。`;
+}
+
+function pickAlternativeQuestions(question, questionKeywords) {
+  const ranked = questions
+    .filter((candidate) => candidate.system === question.system && candidate.id !== question.id)
+    .map((candidate) => ({
+      question: candidate,
+      score: scoreAlternativeQuestion(question, candidate, questionKeywords)
+    }))
+    .sort((left, right) => right.score - left.score);
+
+  if (ranked.length === 0) {
+    return [];
+  }
+
+  if (ranked[0].score <= 0) {
+    return [ranked[0].question];
+  }
+
+  const selected = [ranked[0].question];
+
+  if (ranked[1] && ranked[1].score >= 4) {
+    selected.push(ranked[1].question);
+  }
+
+  return selected;
+}
+
+function buildAlternatives(question, keywords) {
+  const manualAlternatives = buildManualAlternatives(question);
+  if (manualAlternatives.length > 0) {
+    return manualAlternatives;
+  }
+
+  return pickAlternativeQuestions(question, keywords).map((candidate) => ({
+    diagnosis: candidate.answer,
+    reason: buildAlternativeReason(question, candidate, keywords)
+  }));
 }
 
 const keywordMeaningRules = [
@@ -182,6 +388,25 @@ const keywordMeaningRules = [
   { pattern: /偏瘫/, meaning: () => "提示局灶性神经功能缺损，常见于脑卒中等中枢病变。" },
   { pattern: /CT高密度区/, meaning: () => "提示出血性病变可能性大，是脑出血的重要影像依据。" },
   { pattern: /CT阴性/, meaning: () => "在急性脑卒中场景中更偏向早期缺血性改变，而非明显出血。" }
+];
+
+const clinicalTagRules = [
+  { tag: "感染", pattern: /发热|高热|寒战|感染|脓|中性粒细胞|渗出影|盗汗/ },
+  { tag: "呼吸道症状", pattern: /咳嗽|咳痰|咯血|呼吸困难|湿啰音|桶状胸|FEV1|PaO2|PaCO2|胸水|气胸/ },
+  { tag: "胸痛", pattern: /胸痛|P2>A2|硝酸甘油|ST段/ },
+  { tag: "肿瘤消耗", pattern: /消瘦|无痛性|肿物|肿块|癌|乳头湿疹样/ },
+  { tag: "出血", pattern: /出血|咯血|痰中带血|血尿|黑便|呕血|出血点|瘀斑|阴道流血|阴道出血/ },
+  { tag: "妊娠相关", pattern: /停经|HCG|妊娠/ },
+  { tag: "神经系统", pattern: /偏瘫|抽搐|昏迷|意识障碍|脑膜刺激征|CT/ },
+  { tag: "外伤急症", pattern: /外伤|骨擦|反常呼吸|皮下气肿|气管偏移/ },
+  { tag: "泌尿系统", pattern: /尿频|尿急|尿痛|蛋白尿|肾区叩痛|血尿/ },
+  { tag: "腹痛消化", pattern: /腹痛|反酸|黑便|黄疸|腹胀|腹泻|里急后重|上腹|右上腹|左下腹|右下腹/ },
+  { tag: "肝胆胰", pattern: /黄疸|肝|胆|胰|转氨酶|淀粉酶/ },
+  { tag: "心律失常", pattern: /心律绝对不齐|脉搏短绌|突发突止|宽大畸形QRS|心悸/ },
+  { tag: "瓣膜病", pattern: /杂音|开瓣音|第一心音|第二肋间/ },
+  { tag: "儿科出疹", pattern: /皮疹|手足|口病|黄疸|热性惊厥/ },
+  { tag: "风湿免疫", pattern: /蝶形红斑|晨僵|关节|免疫|紫癜|蛋白尿/ },
+  { tag: "中毒", pattern: /接触史|大蒜味|胆碱酯酶|COHb|樱桃红|中毒/ }
 ];
 
 export const questions = [
@@ -389,6 +614,14 @@ export const questions = [
     ["other-013", 16, "昏迷+镇静催眠药物服用病史", "镇静催眠药中毒", [], "助理不要求"]
   ])
 ];
+
+const questionKeywordLookup = new Map(
+  questions.map((question) => [question.id, extractKeywords(question.clue)])
+);
+
+const questionTagLookup = new Map(
+  questions.map((question) => [question.id, deriveClinicalTags(question)])
+);
 
 questions.forEach((question) => {
   if (!question.explanation) {

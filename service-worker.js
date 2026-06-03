@@ -1,4 +1,4 @@
-export const CACHE_NAME = "diagnosis-quiz-v3";
+export const CACHE_NAME = "diagnosis-quiz-v4";
 export const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -15,7 +15,6 @@ export const PRECACHE_URLS = [
 ];
 
 const NETWORK_FIRST_PATHS = new Set([
-  "/",
   "/index.html",
   "/styles.css",
   "/src/app.js",
@@ -31,7 +30,15 @@ export function requestPathname(requestUrl) {
 }
 
 export function isNetworkFirstRequest(requestUrl) {
-  return NETWORK_FIRST_PATHS.has(requestPathname(requestUrl));
+  const pathname = requestPathname(requestUrl);
+
+  if (pathname === "/" || /^\/[^/]+\/$/.test(pathname)) {
+    return true;
+  }
+
+  return [...NETWORK_FIRST_PATHS].some((shellPath) =>
+    pathname === shellPath || pathname.endsWith(shellPath)
+  );
 }
 
 export function shouldCacheNetworkResponse(response) {

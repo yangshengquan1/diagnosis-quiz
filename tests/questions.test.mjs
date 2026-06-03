@@ -40,6 +40,14 @@ test("question bank exports a large structured set with unique ids", () => {
     assert.equal(Array.isArray(question.explanation.clues), true);
     assert.equal(typeof question.explanation.reasoning, "string");
     assert.ok(question.explanation.reasoning.trim().length > 0);
-    assert.equal(typeof question.explanation.differential, "string");
+    assert.equal(Array.isArray(question.explanation.alternatives), true);
+    assert.ok(question.explanation.alternatives.length >= 1);
+
+    for (const alternative of question.explanation.alternatives) {
+      assert.equal(typeof alternative.diagnosis, "string");
+      assert.ok(alternative.diagnosis.trim().length > 0);
+      assert.equal(typeof alternative.reason, "string");
+      assert.ok(alternative.reason.trim().length > 0);
+    }
   }
 });

@@ -1,18 +1,49 @@
 const FALLBACK_EXPLANATION = Object.freeze({
   clues: [],
   reasoning: "该题解析暂未补充，可先结合题干关键词和标准答案复习。",
-  differential: ""
+  alternatives: []
 });
 
 function normalizePunctuation(value) {
   return value
-    .replace(/[（）]/g, (match) => (match === "（" ? "(" : ")"))
-    .replace(/[，、；]/g, ",")
+    .replace(/[（），、；]/g, (match) => {
+      if (match === "（") {
+        return "(";
+      }
+
+      if (match === "）") {
+        return ")";
+      }
+
+      return ",";
+    })
     .replace(/。/g, ".")
-    .replace(/[“”]/g, '"')
+    .replace(/[“”]/g, "\"")
     .replace(/[‘’]/g, "'")
     .replace(/\s*\+\s*/g, "+")
     .replace(/\s*,\s*/g, ",");
+}
+
+function normalizeAlternatives(alternatives, differential = "") {
+  const normalized = Array.isArray(alternatives)
+    ? alternatives
+        .filter((item) => item && (item.diagnosis || item.reason))
+        .map((item) => ({
+          diagnosis: String(item.diagnosis || "").trim(),
+          reason: String(item.reason || "").trim()
+        }))
+        .filter((item) => item.diagnosis || item.reason)
+    : [];
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  const legacyReason = String(differential || "").trim();
+
+  return legacyReason
+    ? [{ diagnosis: "易混淆诊断", reason: legacyReason }]
+    : [];
 }
 
 export function normalizeAnswer(value = "") {
@@ -30,7 +61,7 @@ export function normalizeExplanation(explanation) {
     return {
       clues: [],
       reasoning: reasoning || FALLBACK_EXPLANATION.reasoning,
-      differential: ""
+      alternatives: []
     };
   }
 
@@ -45,12 +76,12 @@ export function normalizeExplanation(explanation) {
     : [];
 
   const reasoning = String(explanation.reasoning || "").trim();
-  const differential = String(explanation.differential || "").trim();
+  const alternatives = normalizeAlternatives(explanation.alternatives, explanation.differential);
 
   return {
     clues,
     reasoning: reasoning || FALLBACK_EXPLANATION.reasoning,
-    differential
+    alternatives
   };
 }
 

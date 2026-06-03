@@ -32,6 +32,14 @@ function renderExplanation(explanation) {
       </li>
     `)
     .join("");
+  const alternativeItems = normalized.alternatives
+    .map((item) => `
+      <li>
+        <strong>${escapeHtml(item.diagnosis)}</strong>
+        <span>${escapeHtml(item.reason)}</span>
+      </li>
+    `)
+    .join("");
 
   const clueSection = clueItems
     ? `
@@ -44,11 +52,13 @@ function renderExplanation(explanation) {
     `
     : "";
 
-  const differentialSection = normalized.differential
+  const alternativesSection = alternativeItems
     ? `
       <section class="explanation-section">
-        <h4>简短鉴别</h4>
-        <p>${escapeHtml(normalized.differential)}</p>
+        <h4>为什么不是别的诊断</h4>
+        <ul class="explanation-list">
+          ${alternativeItems}
+        </ul>
       </section>
     `
     : "";
@@ -61,7 +71,7 @@ function renderExplanation(explanation) {
         <h4>诊断结论</h4>
         <p>${escapeHtml(normalized.reasoning)}</p>
       </section>
-      ${differentialSection}
+      ${alternativesSection}
     </div>
   `;
 }

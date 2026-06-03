@@ -73,7 +73,7 @@ test("renderQuestionView shows either options or manual input based on mode", ()
   assert.match(inputHtml, /正确答案：慢性阻塞性肺疾病/);
 });
 
-test("renderQuestionView shows structured explanation sections", () => {
+test("renderQuestionView shows structured explanation sections with alternatives", () => {
   const html = renderQuestionView({
     mode: "手动输入",
     question: {
@@ -93,7 +93,10 @@ test("renderQuestionView shows structured explanation sections", () => {
           { clue: "FEV1/FVC<70%", meaning: "提示持续气流受限，是慢阻肺诊断关键依据。" }
         ],
         reasoning: "这些线索组合起来更支持慢性阻塞性肺疾病。",
-        differential: "支气管哮喘常有可逆性气流受限，而不是持续下降。"
+        alternatives: [
+          { diagnosis: "支气管哮喘", reason: "哮喘更强调反复发作和可逆性气流受限，不像本题这样持续下降。" },
+          { diagnosis: "肺癌", reason: "本题缺乏进行性消瘦、痰中带血和固定局灶病灶等肿瘤线索。" }
+        ]
       }
     }
   });
@@ -102,7 +105,9 @@ test("renderQuestionView shows structured explanation sections", () => {
   assert.match(html, /桶状胸/);
   assert.match(html, /持续气流受限/);
   assert.match(html, /诊断结论/);
-  assert.match(html, /简短鉴别/);
+  assert.match(html, /为什么不是别的诊断/);
+  assert.match(html, /支气管哮喘/);
+  assert.match(html, /肺癌/);
 });
 
 test("renderWrongBookView supports legacy string explanations", () => {
@@ -123,7 +128,7 @@ test("renderWrongBookView supports legacy string explanations", () => {
   assert.match(html, /肺实质感染/);
 });
 
-test("renderWrongBookView lists wrong counts and recent-practice actions", () => {
+test("renderWrongBookView lists wrong counts and structured alternatives", () => {
   const html = renderWrongBookView({
     entries: [
       {
@@ -132,7 +137,12 @@ test("renderWrongBookView lists wrong counts and recent-practice actions", () =>
         explanation: {
           clues: [],
           reasoning: "长期咳嗽咳痰合并气流受限，更支持慢性阻塞性肺疾病。",
-          differential: ""
+          alternatives: [
+            {
+              diagnosis: "支气管哮喘",
+              reason: "支气管哮喘常有可逆性气流受限，而不是持续下降。"
+            }
+          ]
         },
         wrongCount: 2,
         lastWrongAt: "2026-06-03T12:00:00.000Z"
@@ -142,5 +152,6 @@ test("renderWrongBookView lists wrong counts and recent-practice actions", () =>
 
   assert.match(html, /重新练习全部错题/);
   assert.match(html, /慢性阻塞性肺疾病/);
+  assert.match(html, /支气管哮喘/);
   assert.match(html, /错 2 次/);
 });
