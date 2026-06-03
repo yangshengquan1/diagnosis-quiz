@@ -44,7 +44,7 @@ function renderExplanation(explanation) {
   const clueSection = clueItems
     ? `
       <section class="explanation-section">
-        <h4>关键线索</h4>
+        <h4>逐条分析</h4>
         <ul class="explanation-list">
           ${clueItems}
         </ul>
@@ -55,7 +55,7 @@ function renderExplanation(explanation) {
   const alternativesSection = alternativeItems
     ? `
       <section class="explanation-section">
-        <h4>为什么不是别的诊断</h4>
+        <h4>为什么不是别的病</h4>
         <ul class="explanation-list">
           ${alternativeItems}
         </ul>
@@ -68,7 +68,7 @@ function renderExplanation(explanation) {
       <h3>解析</h3>
       ${clueSection}
       <section class="explanation-section">
-        <h4>诊断结论</h4>
+        <h4>综合判断</h4>
         <p>${escapeHtml(normalized.reasoning)}</p>
       </section>
       ${alternativesSection}

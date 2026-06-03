@@ -51,3 +51,44 @@ test("question bank exports a large structured set with unique ids", () => {
     }
   }
 });
+
+test("copd explanation gives line-by-line support and a combined diagnostic chain", () => {
+  const question = questions.find((item) => item.id === "resp-001");
+
+  assert.ok(question);
+  assert.equal(question.explanation.clues.length >= 4, true);
+
+  const ageClue = question.explanation.clues.find((item) => item.clue === "中老年人");
+  const chestClue = question.explanation.clues.find((item) => item.clue === "桶状胸");
+  const spirometryClue = question.explanation.clues.find((item) => item.clue === "FEV1/FVC<70%");
+
+  assert.ok(ageClue);
+  assert.ok(chestClue);
+  assert.ok(spirometryClue);
+  assert.match(ageClue.meaning, /慢性阻塞性肺疾病|慢阻肺/);
+  assert.match(chestClue.meaning, /肺过度充气|慢性阻塞性肺疾病|慢阻肺/);
+  assert.match(spirometryClue.meaning, /持续性气流受限|客观依据|慢性阻塞性肺疾病|慢阻肺/);
+  assert.match(question.explanation.reasoning, /先/);
+  assert.match(question.explanation.reasoning, /再/);
+  assert.match(question.explanation.reasoning, /综合|一起看/);
+  assert.match(question.explanation.reasoning, /慢性阻塞性肺疾病/);
+});
+
+test("pneumonia explanation explains why each sign points to lung infection", () => {
+  const question = questions.find((item) => item.id === "resp-005");
+
+  assert.ok(question);
+
+  const feverClue = question.explanation.clues.find((item) => item.clue === "发热");
+  const wetRalesClue = question.explanation.clues.find((item) => item.clue === "肺部湿啰音");
+  const xrayClue = question.explanation.clues.find((item) => item.clue === "胸片渗出影");
+
+  assert.ok(feverClue);
+  assert.ok(wetRalesClue);
+  assert.ok(xrayClue);
+  assert.match(feverClue.meaning, /感染|炎症/);
+  assert.match(wetRalesClue.meaning, /渗出物|肺泡|肺实质/);
+  assert.match(xrayClue.meaning, /影像|肺实质|肺炎/);
+  assert.match(question.explanation.reasoning, /呼吸系统|肺实质|感染/);
+  assert.match(question.explanation.reasoning, /肺炎/);
+});

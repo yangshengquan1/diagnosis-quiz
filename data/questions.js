@@ -43,13 +43,10 @@ function buildExplanation(question) {
     clue: keyword,
     meaning: explainKeyword(keyword, question)
   }));
-  const highlightedKeywords = selectHighlights(keywords, 2).map((item) => `“${item}”`).join("、");
 
   return {
     clues,
-    reasoning: clues.length
-      ? `题干中的${highlightedKeywords}等线索同时出现时，更符合${question.answer}的典型表现，因此本题首先考虑${question.answer}。`
-      : `题干信息整体更符合${question.answer}的常见表现，因此本题首先考虑${question.answer}。`,
+    reasoning: buildReasoning(question, clues),
     alternatives: buildAlternatives(question, keywords)
   };
 }
@@ -58,18 +55,70 @@ function explainKeyword(keyword, question) {
   const matchedRule = keywordMeaningRules.find((rule) => rule.pattern.test(keyword));
 
   if (matchedRule) {
-    return matchedRule.meaning(question.answer, keyword);
+    return appendAnswerContext(matchedRule.meaning(question.answer, keyword), keyword, question);
   }
 
   if (/[<>＝=]|mmHg|U\/L|FEV1|CT|MRI|X线|胸片|HCG|ADA|LDH|PaO2|PaCO2/i.test(keyword)) {
-    return "这是题干中的检查或化验线索，能明显缩小诊断范围。";
+    return appendAnswerContext("这是题干中的检查或化验线索，能明显缩小诊断范围。", keyword, question);
   }
 
   if (/痛|困难|水肿|出血|黄疸|昏迷|抽搐|偏瘫/.test(keyword)) {
-    return `提示出现了关键症状，需要结合其他线索进一步判断，更支持${question.answer}。`;
+    return appendAnswerContext(`提示出现了关键症状，需要结合其他线索进一步判断。`, keyword, question);
   }
 
-  return `这是本题需要优先识别的题眼，结合其他表现后更支持${question.answer}。`;
+  return appendAnswerContext("这是本题需要优先识别的题眼。", keyword, question);
+}
+
+function appendAnswerContext(baseMeaning, keyword, question) {
+  const contextualMeaning = buildAnswerContext(keyword, question);
+
+  if (!contextualMeaning) {
+    return baseMeaning;
+  }
+
+  return `${baseMeaning}${contextualMeaning}`;
+}
+
+function buildReasoning(question, clues) {
+  if (clues.length === 0) {
+    return `先看题干提供的是哪一系统的症状和检查，再看有没有能够直接定性的关键证据；本题整体更符合${question.answer}的常见表现，所以首先考虑${question.answer}。`;
+  }
+
+  const highlightedClues = selectHighlights(
+    clues.map((item) => item.clue),
+    Math.min(3, clues.length)
+  );
+  const [firstClue, secondClue, thirdClue] = highlightedClues;
+
+  const opening = firstClue
+    ? `先看“${firstClue}”提示的主要病变方向`
+    : "先看题干提示的主要病变方向";
+  const middle = secondClue
+    ? `，再看“${secondClue}”提供的特异性证据`
+    : "，再看有没有更特异的证据";
+  const closingDetail = thirdClue
+    ? `，再结合“${thirdClue}”这一补充线索`
+    : "";
+  const systemSummary = buildSystemSummary(question);
+
+  return `${opening}${middle}${closingDetail}。把这些表现综合起来看，说明${systemSummary}，所以本题最符合${question.answer}。`;
+}
+
+function buildSystemSummary(question) {
+  const matchedRule = diagnosisSummaryRules.find((rule) => rule.pattern.test(question.answer));
+
+  if (matchedRule) {
+    return matchedRule.summary(question);
+  }
+
+  return `${question.answer}的典型临床特征已经基本凑齐`;
+}
+
+function buildAnswerContext(keyword, question) {
+  const text = `${question.answer} ${keyword}`;
+  const matchedRule = answerContextRules.find((rule) => rule.pattern.test(text));
+
+  return matchedRule ? matchedRule.detail(question, keyword) : "";
 }
 
 function keywordSpecificityScore(keyword) {
@@ -388,6 +437,92 @@ const keywordMeaningRules = [
   { pattern: /偏瘫/, meaning: () => "提示局灶性神经功能缺损，常见于脑卒中等中枢病变。" },
   { pattern: /CT高密度区/, meaning: () => "提示出血性病变可能性大，是脑出血的重要影像依据。" },
   { pattern: /CT阴性/, meaning: () => "在急性脑卒中场景中更偏向早期缺血性改变，而非明显出血。" }
+];
+
+const answerContextRules = [
+  {
+    pattern: /慢性阻塞性肺疾病 .*中老年人/,
+    detail: () => " 慢阻肺本身就是长期吸烟、长期气道炎症和肺功能缓慢下降后形成的慢性病，因此年龄线索和它很贴。"
+  },
+  {
+    pattern: /慢性阻塞性肺疾病 .*咳嗽|慢性阻塞性肺疾病 .*咳痰/,
+    detail: () => " 慢阻肺患者长期气道炎症、黏液分泌增多，所以会反复咳嗽咳痰，而且往往持续很多年。"
+  },
+  {
+    pattern: /慢性阻塞性肺疾病 .*桶状胸/,
+    detail: () => " 这是因为长期呼气不畅、肺泡过度充气，胸廓逐渐固定在吸气位后形成的。"
+  },
+  {
+    pattern: /慢性阻塞性肺疾病 .*FEV1\/FVC<70%/,
+    detail: () => " 这条检查说明阻塞性通气功能障碍已经客观存在，是慢阻肺定性的核心证据。"
+  },
+  {
+    pattern: /肺炎 .*发热/,
+    detail: () => " 肺炎本质上是肺实质急性感染，所以发热往往来自机体对感染的炎症反应。"
+  },
+  {
+    pattern: /肺炎 .*咳嗽|肺炎 .*咳痰/,
+    detail: () => " 感染灶位于气道和肺泡附近时，会刺激咳嗽反射，同时产生炎性分泌物，所以出现咳痰。"
+  },
+  {
+    pattern: /肺炎 .*肺部湿啰音/,
+    detail: () => " 说明肺泡或细支气管里已经有渗出物，空气通过液体时才会听到这样的湿啰音。"
+  },
+  {
+    pattern: /肺炎 .*胸片渗出影/,
+    detail: () => " 这提示感染已经落到肺实质，影像上能看到炎症浸润，是把普通上感和肺炎拉开的关键证据。"
+  },
+  {
+    pattern: /急性左心衰 .*粉红色泡沫状痰/,
+    detail: () => " 左心泵血功能突然下降后，肺毛细血管压力升高，液体漏进肺泡，就会形成这种典型痰液。"
+  },
+  {
+    pattern: /急性左心衰 .*呼吸困难/,
+    detail: () => " 本质上是肺淤血和肺水肿影响了气体交换，所以病人会迅速憋喘。"
+  },
+  {
+    pattern: /异位妊娠 .*停经/,
+    detail: () => " 宫外孕首先仍然是妊娠，所以停经往往是最早出现的背景线索。"
+  },
+  {
+    pattern: /异位妊娠 .*阴道出血/,
+    detail: () => " 受精卵着床位置异常后，蜕膜剥脱或局部破裂时就会出现阴道出血。"
+  },
+  {
+    pattern: /异位妊娠 .*HCG阳性/,
+    detail: () => " 它证明体内确实存在妊娠相关组织，是把普通妇科出血拉回妊娠相关疾病框架的关键一步。"
+  }
+];
+
+const diagnosisSummaryRules = [
+  {
+    pattern: /慢性阻塞性肺疾病/,
+    summary: () => "患者既有长期慢性气道症状，又有肺过度充气体征，并且肺功能已经证实持续性气流受限"
+  },
+  {
+    pattern: /^肺炎$/,
+    summary: () => "患者的症状、体征和影像都指向肺实质急性感染"
+  },
+  {
+    pattern: /肺炎链球菌肺炎/,
+    summary: () => "患者有典型急性感染起病，并且痰液和影像表现都符合肺炎链球菌肺炎"
+  },
+  {
+    pattern: /急性左心衰/,
+    summary: () => "患者出现了急性肺淤血甚至肺水肿的表现，符合左心功能突然失代偿"
+  },
+  {
+    pattern: /异位妊娠/,
+    summary: () => "患者已进入妊娠相关疾病框架，同时出血表现又提示妊娠位置异常带来的风险"
+  },
+  {
+    pattern: /脑出血/,
+    summary: () => "患者既有急性脑血管事件表现，又有出血性影像依据"
+  },
+  {
+    pattern: /脑梗死/,
+    summary: () => "患者符合急性缺血性卒中的神经功能缺损特点，而缺乏明确出血证据"
+  }
 ];
 
 const clinicalTagRules = [

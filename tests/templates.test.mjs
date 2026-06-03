@@ -101,11 +101,11 @@ test("renderQuestionView shows structured explanation sections with alternatives
     }
   });
 
-  assert.match(html, /关键线索/);
+  assert.match(html, /逐条分析/);
   assert.match(html, /桶状胸/);
   assert.match(html, /持续气流受限/);
-  assert.match(html, /诊断结论/);
-  assert.match(html, /为什么不是别的诊断/);
+  assert.match(html, /综合判断/);
+  assert.match(html, /为什么不是别的病/);
   assert.match(html, /支气管哮喘/);
   assert.match(html, /肺癌/);
 });
@@ -124,7 +124,7 @@ test("renderWrongBookView supports legacy string explanations", () => {
   });
 
   assert.match(html, /解析/);
-  assert.match(html, /诊断结论/);
+  assert.match(html, /综合判断/);
   assert.match(html, /肺实质感染/);
 });
 
