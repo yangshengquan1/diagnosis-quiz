@@ -85,7 +85,11 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-export function renderHomeView({ summary, mode, installState, systems }) {
+export function renderHomeView({ summary, mode, installState, systems, activeSession }) {
+  const resumeButton = activeSession
+    ? `<button data-action="resume-session">继续上次练习</button>`
+    : "";
+
   return `
     <section class="home-view">
       <header class="hero">
@@ -101,6 +105,7 @@ export function renderHomeView({ summary, mode, installState, systems }) {
         <article><span>错题数</span><strong>${summary.wrongCount}</strong></article>
       </section>
       <section class="entry-grid">
+        ${resumeButton}
         <button data-nav="categories">分类练习</button>
         <button data-nav="random">随机练习</button>
         <button data-nav="wrong-book">错题本</button>

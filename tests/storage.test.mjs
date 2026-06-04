@@ -33,7 +33,15 @@ test("save persists mode, completed ids, and wrong-book data", () => {
         lastMode: "四选一"
       }
     },
-    recentView: "wrong-book"
+    recentView: "wrong-book",
+    activeSession: {
+      view: "random",
+      system: null,
+      random: true,
+      questionIds: ["resp-1", "resp-2"],
+      currentIndex: 1,
+      feedback: null
+    }
   };
 
   api.save(state);

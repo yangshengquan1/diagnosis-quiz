@@ -126,8 +126,10 @@ export function buildChoiceOptions(question, questions) {
 }
 
 export function createSession(questions, options) {
-  const selected = options.view === "wrong-book"
-    ? questions.filter((item) => (options.questionIds || []).includes(item.id))
+  const selected = Array.isArray(options.questionIds) && options.questionIds.length > 0
+    ? options.questionIds
+        .map((id) => questions.find((item) => item.id === id))
+        .filter(Boolean)
     : options.system
       ? questions.filter((item) => item.system === options.system)
       : [...questions];
@@ -160,6 +162,54 @@ export function summarizeProgress(questions, state) {
     totalQuestions: questions.length,
     completedCount: state.completedIds.length,
     wrongCount: Object.keys(state.wrongBook).length
+  };
+}
+
+export function snapshotSessionState(session, currentIndex, feedback) {
+  if (!session || !Array.isArray(session.questions) || session.questions.length === 0) {
+    return null;
+  }
+
+  return {
+    view: session.view || "random",
+    system: session.system || null,
+    random: Boolean(session.random),
+    questionIds: session.questions.map((item) => item.id),
+    currentIndex,
+    feedback: feedback || null
+  };
+}
+
+export function restorePersistedSession(questions, persisted) {
+  if (
+    !persisted
+    || !Array.isArray(persisted.questionIds)
+    || persisted.questionIds.length === 0
+    || !Number.isInteger(persisted.currentIndex)
+  ) {
+    return null;
+  }
+
+  const session = createSession(questions, {
+    view: persisted.view || "random",
+    system: persisted.system || null,
+    random: Boolean(persisted.random),
+    questionIds: persisted.questionIds
+  });
+
+  if (
+    !Array.isArray(session.questions)
+    || session.questions.length === 0
+    || persisted.currentIndex < 0
+    || persisted.currentIndex >= session.questions.length
+  ) {
+    return null;
+  }
+
+  return {
+    session,
+    currentIndex: persisted.currentIndex,
+    feedback: persisted.feedback || null
   };
 }
 

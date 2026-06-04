@@ -7,7 +7,9 @@ import {
   isAnswerCorrect,
   normalizeExplanation,
   normalizeAnswer,
+  restorePersistedSession,
   recordWrongQuestion,
+  snapshotSessionState,
   summarizeProgress
 } from "../src/quiz-core.js";
 
@@ -128,6 +130,88 @@ test("createSession filters by category and supports random ordering", () => {
 
   assert.equal(session.questions.length, 4);
   assert.equal(session.questions.every((item) => item.system === "呼吸系统疾病"), true);
+});
+
+test("createSession honors explicit question order when questionIds are provided", () => {
+  const session = createSession(sampleQuestions, {
+    view: "resume",
+    questionIds: ["cardio-1", "resp-2", "resp-1"],
+    random: false
+  });
+
+  assert.deepEqual(
+    session.questions.map((item) => item.id),
+    ["cardio-1", "resp-2", "resp-1"]
+  );
+});
+
+test("snapshotSessionState stores ordered ids, current index, and feedback", () => {
+  const session = {
+    view: "random",
+    random: true,
+    questions: [sampleQuestions[1], sampleQuestions[3], sampleQuestions[4]]
+  };
+  const feedback = {
+    correct: false,
+    answer: "肺癌",
+    userAnswer: "支气管哮喘",
+    explanation: {
+      clues: [],
+      reasoning: "更符合肺癌。",
+      alternatives: []
+    }
+  };
+
+  assert.deepEqual(snapshotSessionState(session, 1, feedback), {
+    view: "random",
+    system: null,
+    random: true,
+    questionIds: ["resp-2", "resp-4", "cardio-1"],
+    currentIndex: 1,
+    feedback
+  });
+});
+
+test("restorePersistedSession rebuilds a saved session and preserves question order", () => {
+  const restored = restorePersistedSession(sampleQuestions, {
+    view: "category",
+    system: "呼吸系统疾病",
+    random: false,
+    questionIds: ["resp-4", "resp-2", "resp-1"],
+    currentIndex: 2,
+    feedback: null
+  });
+
+  assert.ok(restored);
+  assert.equal(restored.currentIndex, 2);
+  assert.equal(restored.feedback, null);
+  assert.deepEqual(
+    restored.session.questions.map((item) => item.id),
+    ["resp-4", "resp-2", "resp-1"]
+  );
+});
+
+test("restorePersistedSession returns null for invalid saved progress", () => {
+  assert.equal(
+    restorePersistedSession(sampleQuestions, {
+      view: "random",
+      random: true,
+      questionIds: [],
+      currentIndex: 0,
+      feedback: null
+    }),
+    null
+  );
+  assert.equal(
+    restorePersistedSession(sampleQuestions, {
+      view: "random",
+      random: true,
+      questionIds: ["resp-1"],
+      currentIndex: 4,
+      feedback: null
+    }),
+    null
+  );
 });
 
 test("recordWrongQuestion deduplicates and increments wrong counts", () => {

@@ -4,7 +4,8 @@ export const defaultState = {
   mode: "四选一",
   completedIds: [],
   wrongBook: {},
-  recentView: "home"
+  recentView: "home",
+  activeSession: null
 };
 
 export function createStorageApi(storage) {

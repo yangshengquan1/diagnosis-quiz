@@ -11,6 +11,7 @@ test("renderHomeView includes the three main entry points", () => {
     summary: { totalQuestions: 174, completedCount: 12, wrongCount: 5 },
     mode: "四选一",
     installState: null,
+    activeSession: null,
     systems: [
       { name: "呼吸系统疾病", total: 23, completed: 3, wrong: 1 },
       { name: "心血管系统疾病", total: 14, completed: 2, wrong: 0 }
@@ -34,6 +35,7 @@ test("renderHomeView includes install and network status copy", () => {
       isOnline: true,
       label: "可安装到主屏幕"
     },
+    activeSession: null,
     systems: [
       { name: "呼吸系统疾病", total: 23, completed: 3, wrong: 1 }
     ]
@@ -41,6 +43,28 @@ test("renderHomeView includes install and network status copy", () => {
 
   assert.match(html, /可安装到主屏幕/);
   assert.match(html, /data-action="install-app"/);
+});
+
+test("renderHomeView shows resume entry when an active session exists", () => {
+  const html = renderHomeView({
+    summary: { totalQuestions: 174, completedCount: 12, wrongCount: 5 },
+    mode: "四选一",
+    installState: null,
+    activeSession: {
+      view: "random",
+      system: null,
+      random: true,
+      questionIds: ["resp-1", "resp-2"],
+      currentIndex: 1,
+      feedback: null
+    },
+    systems: [
+      { name: "呼吸系统疾病", total: 23, completed: 3, wrong: 1 }
+    ]
+  });
+
+  assert.match(html, /继续上次练习/);
+  assert.match(html, /data-action="resume-session"/);
 });
 
 test("renderQuestionView shows either options or manual input based on mode", () => {

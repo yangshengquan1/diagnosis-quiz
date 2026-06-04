@@ -6,6 +6,8 @@ import {
   getQuestionExplanation,
   isAnswerCorrect,
   recordWrongQuestion,
+  restorePersistedSession,
+  snapshotSessionState,
   summarizeProgress
 } from "./quiz-core.js";
 import { createStorageApi, defaultState } from "./storage.js";
@@ -37,6 +39,22 @@ function save() {
   storage.save(state);
 }
 
+function persistActiveSession() {
+  state = {
+    ...state,
+    activeSession: snapshotSessionState(session, currentIndex, feedback)
+  };
+  save();
+}
+
+function clearActiveSession() {
+  state = {
+    ...state,
+    activeSession: null
+  };
+  save();
+}
+
 function updateInstallState() {
   installState = buildInstallState({
     hasPrompt: Boolean(installPromptEvent),
@@ -61,6 +79,7 @@ function renderHome() {
     summary: summarizeProgress(questions, state),
     mode: state.mode,
     installState,
+    activeSession: state.activeSession,
     systems: buildSystemStats(questions, state, systems)
   });
 }
@@ -116,10 +135,12 @@ function startSession(options) {
   save();
 
   if (session.questions.length === 0) {
+    clearActiveSession();
     renderWrongBook();
     return;
   }
 
+  persistActiveSession();
   renderCurrentQuestion();
 }
 
@@ -145,18 +166,39 @@ function submitAnswer(userAnswer) {
     explanation: getQuestionExplanation(question)
   };
 
+  persistActiveSession();
   renderCurrentQuestion();
 }
 
 function goToNextQuestion() {
   if (!session || currentIndex >= session.questions.length - 1) {
+    session = null;
+    feedback = null;
+    currentIndex = 0;
+    clearActiveSession();
     renderHome();
     return;
   }
 
   currentIndex += 1;
   feedback = null;
+  persistActiveSession();
   renderCurrentQuestion();
+}
+
+function resumeSavedSession() {
+  const restored = restorePersistedSession(questions, state.activeSession);
+
+  if (!restored) {
+    clearActiveSession();
+    return false;
+  }
+
+  session = restored.session;
+  currentIndex = restored.currentIndex;
+  feedback = restored.feedback;
+  renderCurrentQuestion();
+  return true;
 }
 
 function openRecentWrongs() {
@@ -241,6 +283,7 @@ app.addEventListener("click", async (event) => {
     save();
 
     if (session) {
+      persistActiveSession();
       renderCurrentQuestion();
     } else {
       renderHome();
@@ -249,8 +292,6 @@ app.addEventListener("click", async (event) => {
   }
 
   if (target.dataset.nav === "home") {
-    session = null;
-    feedback = null;
     renderHome();
     return;
   }
@@ -262,6 +303,11 @@ app.addEventListener("click", async (event) => {
 
   if (target.dataset.nav === "random") {
     startSession({ view: "random", system: null, random: true });
+    return;
+  }
+
+  if (target.dataset.action === "resume-session") {
+    resumeSavedSession();
     return;
   }
 
@@ -309,4 +355,6 @@ app.addEventListener("submit", (event) => {
   submitAnswer(formData.get("manual-answer") || "");
 });
 
-renderHome();
+if (!resumeSavedSession()) {
+  renderHome();
+}
